@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { NewCustomerModal } from "@/components/NewCustomerModal";
 import { PurchaseIntervalSettings } from "@/components/PurchaseIntervalSettings";
 import { Button } from "@/components/ui/button";
+import { CustomerCard } from "@/components/CustomerCard";
 
 export default function Customers() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -84,100 +85,127 @@ export default function Customers() {
             <Skeleton className="h-96" />
           ) : (
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Kd.-Nr.</TableHead>
-                    <TableHead>Firma</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Ort</TableHead>
-                    <TableHead>Außendienstler</TableHead>
-                    <TableHead>Kaufintervall</TableHead>
-                    <TableHead>Kunde inaktiv</TableHead>
-                    <TableHead>Umsatz 365d</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {customers?.length === 0 ? (
+              {/* Desktop Table View */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground">
-                        Keine Kunden gefunden
-                      </TableCell>
+                      <TableHead>Kd.-Nr.</TableHead>
+                      <TableHead>Firma</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Ort</TableHead>
+                      <TableHead>Außendienstler</TableHead>
+                      <TableHead>Kaufintervall</TableHead>
+                      <TableHead>Kunde inaktiv</TableHead>
+                      <TableHead>Umsatz 365d</TableHead>
                     </TableRow>
-                  ) : (
-                    customers?.map((customer) => (
-                      <TableRow key={customer.kunden_nummer}>
-                        <TableCell className="font-mono">{customer.kunden_nummer}</TableCell>
-                        <TableCell className="font-medium">{customer.firma}</TableCell>
-                        <TableCell className="text-sm">{customer.email}</TableCell>
-                        <TableCell>{customer.ort}</TableCell>
-                        <TableCell>
-                          <Select
-                            value={customer.rep_id?.toString() || ""}
-                            onValueChange={(value) => handleRepChange(customer.kunden_nummer, value)}
-                          >
-                            <SelectTrigger className="w-[180px]">
-                              <SelectValue placeholder="Auswählen..." />
-                            </SelectTrigger>
-                            <SelectContent className="bg-popover">
-                              {reps?.map((rep) => (
-                                <SelectItem key={rep.rep_id} value={rep.rep_id.toString()}>
-                                  {rep.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <PurchaseIntervalSettings
-                            kundenNummer={customer.kunden_nummer}
-                            currentInterval={customer.purchase_interval}
-                            seasonStart={customer.season_start}
-                            seasonEnd={customer.season_end}
-                            seasonalInterval={customer.seasonal_interval}
-                            customInterval={customer.custom_interval}
-                            onUpdate={(updates) => {
-                              updateCustomer.mutate({
-                                kunden_nummer: customer.kunden_nummer,
-                                updates: updates,
-                              }, {
-                                onSuccess: () => toast.success("Kaufintervall aktualisiert"),
-                                onError: () => toast.error("Fehler beim Aktualisieren"),
-                              });
-                            }}
-                            trigger={
-                              <Button variant="outline" className="w-[120px] justify-between">
-                                {customer.purchase_interval === "Manual"
-                                  ? `${customer.custom_interval} Tage`
-                                  : customer.purchase_interval === "Saisonal"
-                                    ? "Saisonal"
-                                    : `${customer.purchase_interval} Tage`}
-                              </Button>
-                            }
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={customer.status_active ? "active" : "inactive"}
-                            onValueChange={(value) => handleStatusActiveChange(customer.kunden_nummer, value)}
-                          >
-                            <SelectTrigger className="w-[100px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="bg-popover">
-                              <SelectItem value="active">Nein</SelectItem>
-                              <SelectItem value="inactive">Ja</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell className="font-mono">
-                          €{customer.revenue_365d ? parseFloat(customer.revenue_365d.toString()).toFixed(2) : "0.00"}
+                  </TableHeader>
+                  <TableBody>
+                    {customers?.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-muted-foreground">
+                          Keine Kunden gefunden
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : (
+                      customers?.map((customer) => (
+                        <TableRow key={customer.kunden_nummer}>
+                          <TableCell className="font-mono">{customer.kunden_nummer}</TableCell>
+                          <TableCell className="font-medium">{customer.firma}</TableCell>
+                          <TableCell className="text-sm">{customer.email}</TableCell>
+                          <TableCell>{customer.ort}</TableCell>
+                          <TableCell>
+                            <Select
+                              value={customer.rep_id?.toString() || ""}
+                              onValueChange={(value) => handleRepChange(customer.kunden_nummer, value)}
+                            >
+                              <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="Auswählen..." />
+                              </SelectTrigger>
+                              <SelectContent className="bg-popover">
+                                {reps?.map((rep) => (
+                                  <SelectItem key={rep.rep_id} value={rep.rep_id.toString()}>
+                                    {rep.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <PurchaseIntervalSettings
+                              kundenNummer={customer.kunden_nummer}
+                              currentInterval={customer.purchase_interval}
+                              seasonStart={customer.season_start}
+                              seasonEnd={customer.season_end}
+                              onUpdate={(updates) => {
+                                updateCustomer.mutate({
+                                  kunden_nummer: customer.kunden_nummer,
+                                  updates: updates,
+                                }, {
+                                  onSuccess: () => toast.success("Kaufintervall aktualisiert"),
+                                  onError: () => toast.error("Fehler beim Aktualisieren"),
+                                });
+                              }}
+                              trigger={
+                                <Button variant="outline" className="w-[120px] justify-between">
+                                  {customer.season_start && customer.season_end
+                                    ? "Saisonal"
+                                    : `${customer.purchase_interval || 7} Tage`}
+                                </Button>
+                              }
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Select
+                              value={customer.status_active ? "active" : "inactive"}
+                              onValueChange={(value) => handleStatusActiveChange(customer.kunden_nummer, value)}
+                            >
+                              <SelectTrigger className="w-[100px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-popover">
+                                <SelectItem value="active">Nein</SelectItem>
+                                <SelectItem value="inactive">Ja</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="font-mono">
+                            €{customer.revenue_365d ? parseFloat(customer.revenue_365d.toString()).toFixed(2) : "0.00"}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-4">
+                {customers?.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    Keine Kunden gefunden
+                  </div>
+                ) : (
+                  customers?.map((customer) => (
+                    <CustomerCard
+                      key={customer.kunden_nummer}
+                      customer={customer}
+                      reps={reps}
+                      onRepChange={handleRepChange}
+                      onStatusChange={handleStatusActiveChange}
+                      onIntervalUpdate={(updates) => {
+                        updateCustomer.mutate({
+                          kunden_nummer: customer.kunden_nummer,
+                          updates: updates,
+                        }, {
+                          onSuccess: () => toast.success("Kaufintervall aktualisiert"),
+                          onError: () => toast.error("Fehler beim Aktualisieren"),
+                        });
+                      }}
+                    />
+                  ))
+                )}
+              </div>
             </div>
           )}
         </CardContent>

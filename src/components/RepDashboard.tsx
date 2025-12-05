@@ -16,7 +16,10 @@ import { useCampaigns } from "@/hooks/useCampaigns";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { OfferCard } from "@/components/OfferCard";
+import { CampaignCard } from "@/components/CampaignCard";
 
 export function RepDashboard() {
   const { rep } = useAuth();
@@ -48,8 +51,8 @@ export function RepDashboard() {
             ...(failureReason && { failure_reason: failureReason }),
             ...(note && { notitz_rep: note }),
             ...(reminderDate && { reminder_date: reminderDate }),
-            // Clear reminder_date for CLAIMED status
-            ...(action === 'CLAIMED' && { reminder_date: null })
+            // Clear reminder_date for CLAIMED and DECLINED status
+            ...((action === 'CLAIMED' || action === 'DECLINED') && { reminder_date: null })
           }
         });
       } else if (taskType === 'churn') {
@@ -181,6 +184,13 @@ export function RepDashboard() {
     return true;
   });
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentTab = searchParams.get("tab") || "tasks";
+
+  const handleTabChange = (value: string) => {
+    setSearchParams({ tab: value });
+  };
+
   return (
     <div className="space-y-8">
       {/* Reminder Dialog */}
@@ -214,8 +224,8 @@ export function RepDashboard() {
 
       <h2 className="text-2xl font-bold">Dashboard</h2>
 
-      <Tabs defaultValue="tasks" className="w-full">
-        <TabsList>
+      <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
+        <TabsList className="hidden md:flex">
           <TabsTrigger value="tasks">Meine Aufgaben</TabsTrigger>
           <TabsTrigger value="offers">Meine Angebote</TabsTrigger>
           <TabsTrigger value="actions">Aktionen</TabsTrigger>
@@ -258,41 +268,79 @@ export function RepDashboard() {
           ) : (
             <div className="space-y-4">
               {tasks && tasks.filter(task => task.reminder_date).length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Kunde</TableHead>
-                      <TableHead>Kampagne</TableHead>
-                      <TableHead>Angebot am</TableHead>
-                      <TableHead>Erinnerung am</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {tasks.filter(task => task.reminder_date).map(task => {
-                      const reminderDate = new Date(task.reminder_date!);
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      const isDue = reminderDate <= today;
-
-                      return (
-                        <TableRow key={task.task_id} className={isDue ? 'bg-red-50' : ''}>
-                          <TableCell className="font-medium">{task.firma}</TableCell>
-                          <TableCell>{task.title}</TableCell>
-                          <TableCell>{task.last_change ? new Date(task.last_change).toLocaleDateString('de-DE') : '-'}</TableCell>
-                          <TableCell>{reminderDate.toLocaleDateString('de-DE')}</TableCell>
-                          <TableCell>
-                            {isDue ? (
-                              <Badge variant="destructive">Fällig!</Badge>
-                            ) : (
-                              <Badge variant="secondary">Ausstehend</Badge>
-                            )}
-                          </TableCell>
+                <>
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Kunde</TableHead>
+                          <TableHead>Kampagne</TableHead>
+                          <TableHead>Angebot am</TableHead>
+                          <TableHead>Erinnerung am</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Aktionen</TableHead>
                         </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {tasks.filter(task => task.reminder_date).map(task => {
+                          const reminderDate = new Date(task.reminder_date!);
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          const isDue = reminderDate <= today;
+
+                          return (
+                            <TableRow key={task.task_id} className={isDue ? 'bg-red-50' : ''}>
+                              <TableCell className="font-medium">{task.firma}</TableCell>
+                              <TableCell>{task.title}</TableCell>
+                              <TableCell>{task.last_change ? new Date(task.last_change).toLocaleDateString('de-DE') : '-'}</TableCell>
+                              <TableCell>{reminderDate.toLocaleDateString('de-DE')}</TableCell>
+                              <TableCell>
+                                {isDue ? (
+                                  <Badge variant="destructive">Fällig!</Badge>
+                                ) : (
+                                  <Badge variant="secondary">Ausstehend</Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                    onClick={() => handleTaskComplete(task.task_id || '', 'promo', 'CLAIMED')}
+                                  >
+                                    Gekauft
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-red-500 text-red-600 hover:bg-red-50"
+                                    onClick={() => handleTaskComplete(task.task_id || '', 'promo', 'DECLINED')}
+                                  >
+                                    Abgelehnt
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Mobile Card View */}
+                  <div className="md:hidden">
+                    {tasks.filter(task => task.reminder_date).map(task => (
+                      <OfferCard
+                        key={task.task_id}
+                        task={task}
+                        onStatusChange={(taskId, action, failureReason, note) =>
+                          handleTaskComplete(taskId, 'promo', action, failureReason, note)
+                        }
+                      />
+                    ))}
+                  </div>
+                </>
               ) : (
                 <Card className="p-6 text-center text-muted-foreground">
                   Keine Angebote mit Erinnerungen vorhanden
@@ -370,38 +418,50 @@ export function RepDashboard() {
           {campaignsLoading ? (
             <Skeleton className="h-64" />
           ) : campaigns && campaigns.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Artikelnummer</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Niedrigster VK</TableHead>
-                  <TableHead>Aktiv von</TableHead>
-                  <TableHead>Absagegründe</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Artikelnummer</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Niedrigster VK</TableHead>
+                      <TableHead>Aktiv von</TableHead>
+                      <TableHead>Absagegründe</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {campaigns.map((campaign) => (
+                      <TableRow key={campaign.id}>
+                        <TableCell className="font-mono">{campaign.campaign_code}</TableCell>
+                        <TableCell>{campaign.name}</TableCell>
+                        <TableCell>{campaign.Niedrigster_VK || "-"}</TableCell>
+                        <TableCell>{new Date(campaign.active_from).toLocaleDateString("de-DE")}</TableCell>
+                        <TableCell>
+                          {campaign.rejection_reasons && (campaign.rejection_reasons as string[]).length > 0
+                            ? (campaign.rejection_reasons as string[]).join(", ")
+                            : "-"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={campaign.is_active ? "default" : "secondary"}>
+                            {campaign.is_active ? "Aktiv" : "Inaktiv"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden">
                 {campaigns.map((campaign) => (
-                  <TableRow key={campaign.id}>
-                    <TableCell className="font-mono">{campaign.campaign_code}</TableCell>
-                    <TableCell>{campaign.name}</TableCell>
-                    <TableCell>{campaign.Niedrigster_VK || "-"}</TableCell>
-                    <TableCell>{new Date(campaign.active_from).toLocaleDateString("de-DE")}</TableCell>
-                    <TableCell>
-                      {campaign.rejection_reasons && (campaign.rejection_reasons as string[]).length > 0
-                        ? (campaign.rejection_reasons as string[]).join(", ")
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={campaign.is_active ? "default" : "secondary"}>
-                        {campaign.is_active ? "Aktiv" : "Inaktiv"}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
+                  <CampaignCard key={campaign.id} campaign={campaign} />
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           ) : (
             <Card className="p-6 text-center text-muted-foreground">
               Keine Artikel verfügbar

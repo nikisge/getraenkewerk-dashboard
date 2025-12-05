@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Simple upright bottle icon in blue matching the Getränkewerk brand -->
+  <defs>
+    <linearGradient id="bottleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1e40af;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e40af;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Bottle body -->
+  <path d="M12 8 L12 6 Q12 4 14 4 L18 4 Q20 4 20 6 L20 8 L21 10 Q22 12 22 14 L22 28 Q22 30 20 30 L12 30 Q10 30 10 28 L10 14 Q10 12 11 10 Z" 
+        fill="url(#bottleGradient)" 
+        stroke="#1e3a8a" 
+        stroke-width="0.5"/>
+  <!-- Bottle cap -->
+  <rect x="13" y="2" width="6" height="3" rx="1" fill="#1e3a8a"/>
+  <!-- Highlight -->
+  <path d="M13 12 L13 26 Q13 28 14 28" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+</svg>

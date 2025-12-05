@@ -1,21 +1,26 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, ClipboardList, Target, Users } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Target, Users, FileText, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function MobileBottomNav() {
   const { rep } = useAuth();
-  
+
   const allNavItems = [
     { to: "/", icon: LayoutDashboard, label: "Außendienst", roles: ['admin', 'rep'] },
     { to: "/task-distribution", icon: ClipboardList, label: "Verteilung", roles: ['admin'] },
     { to: "/campaigns", icon: Target, label: "Campaigns", roles: ['admin'] },
     { to: "/customers", icon: Users, label: "Kunden", roles: ['admin'] },
   ];
-  
-  const navItems = allNavItems.filter(item => 
-    item.roles.includes(rep?.role || 'rep')
-  );
+
+  const navItems = rep?.role === 'rep'
+    ? [
+      { to: "/?tab=tasks", icon: ClipboardList, label: "Aufgaben" },
+      { to: "/?tab=offers", icon: FileText, label: "Angebote" },
+      { to: "/?tab=actions", icon: Zap, label: "Aktionen" },
+      { to: "/?tab=campaigns", icon: Target, label: "Kampagnen" },
+    ]
+    : allNavItems.filter(item => item.roles.includes(rep?.role || 'rep'));
 
   return (
     <nav className="flex md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 pb-safe">
