@@ -54,8 +54,9 @@ export function RepDashboard() {
             ...(failureReason && { failure_reason: failureReason }),
             ...(note && { notitz_rep: note }),
             ...(reminderDate && { reminder_date: reminderDate }),
-            // Clear reminder_date for CLAIMED and DECLINED status
-            ...((action === 'CLAIMED' || action === 'DECLINED') && { reminder_date: null })
+            // Clear reminder_date for CLAIMED and DECLINED status, set claimed_at for CLAIMED
+            ...((action === 'CLAIMED' || action === 'DECLINED') && { reminder_date: null }),
+            ...(action === 'CLAIMED' && { claimed_at: new Date().toISOString() })
           }
         });
       } else if (taskType === 'churn') {
@@ -173,7 +174,7 @@ export function RepDashboard() {
       } else if (action === "CLAIMED") {
         await updateTask.mutateAsync({
           id: editingOfferTask.task_id || "",
-          updates: { status: "CLAIMED", verified_by_sales: true, reminder_date: null },
+          updates: { status: "CLAIMED", verified_by_sales: true, reminder_date: null, claimed_at: new Date().toISOString() },
         });
         toast.success("Angebot als gekauft markiert");
       } else if (action === "DECLINED") {

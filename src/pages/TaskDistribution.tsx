@@ -17,13 +17,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Filter, Calendar as CalendarIcon } from "lucide-react";
+import { Filter, Calendar as CalendarIcon, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { DashboardTask } from "@/hooks/useDashboardTasksAdmin";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OfferDialog } from "@/components/OfferDialog";
+import { VerificationFailedCard } from "@/components/VerificationFailedCard";
+import { useVerificationFailedTasks } from "@/hooks/useVerificationFailedTasks";
 
 export default function TaskDistribution() {
   const [selectedRepId, setSelectedRepId] = useState<string>("all");
@@ -40,6 +42,7 @@ export default function TaskDistribution() {
 
   const { data: allTasks, isLoading: tasksLoading } = useDashboardTasksAdmin();
   const { data: reps, isLoading: repsLoading } = useReps();
+  const { data: verificationFailedTasks, isLoading: verificationLoading } = useVerificationFailedTasks();
   const updateTaskMutation = useUpdateTask();
   const updateChurnCallbackMutation = useUpdateChurnCallback();
   const updateCustomerRepMutation = useUpdateCustomerRep();
@@ -106,8 +109,8 @@ export default function TaskDistribution() {
             ...(failureReason && { failure_reason: failureReason }),
             ...(note && { notitz_rep: note }),
             ...(reminderDate && { reminder_date: reminderDate }),
-            // Clear reminder_date for CLAIMED status
-            ...(action === 'CLAIMED' && { reminder_date: null })
+            // Clear reminder_date for CLAIMED status and set claimed_at
+            ...(action === 'CLAIMED' && { reminder_date: null, claimed_at: new Date().toISOString() })
           },
         });
       } else if (taskType === "churn") {
@@ -201,7 +204,7 @@ export default function TaskDistribution() {
       } else if (action === "CLAIMED") {
         await updateTaskMutation.mutateAsync({
           id: editingOfferTask.task_id || "",
-          updates: { status: "CLAIMED", verified_by_sales: true, reminder_date: null },
+          updates: { status: "CLAIMED", verified_by_sales: true, reminder_date: null, claimed_at: new Date().toISOString() },
         });
         toast.success("Angebot als gekauft markiert");
       } else if (action === "DECLINED") {
@@ -214,6 +217,38 @@ export default function TaskDistribution() {
       setEditingOfferTask(null);
     } catch (error) {
       toast.error("Konnte nicht aktualisiert werden");
+    }
+  };
+
+  const handleVerificationFailedComplete = async (
+    taskId: string,
+    action: string,
+    failureReason?: string,
+    note?: string,
+    reminderDate?: string
+  ) => {
+    try {
+      setRemovedTaskIds(prev => [...prev, taskId]);
+
+      await updateTaskMutation.mutateAsync({
+        id: taskId,
+        updates: {
+          status: action,
+          verified_by_sales: true,
+          verification_failed: false, // Reset the flag
+          ...(failureReason && { failure_reason: failureReason }),
+          ...(note && { notitz_rep: note }),
+          ...(reminderDate && { reminder_date: reminderDate }),
+          ...(action === 'CLAIMED' && { reminder_date: null, claimed_at: new Date().toISOString() }),
+          ...((action === 'DECLINED') && { reminder_date: null })
+        },
+      });
+
+      toast.success("Aufgabe erfolgreich aktualisiert!");
+    } catch (error) {
+      setRemovedTaskIds(prev => prev.filter(id => id !== taskId));
+      toast.error("Fehler beim Aktualisieren der Aufgabe");
+      console.error(error);
     }
   };
 
@@ -434,6 +469,14 @@ export default function TaskDistribution() {
           <TabsList className="mb-4 w-full md:w-auto self-start">
             <TabsTrigger value="tasks">Aufgabenverteilung</TabsTrigger>
             <TabsTrigger value="offers">Angebote Übersicht</TabsTrigger>
+            <TabsTrigger value="verification" className="relative">
+              Lügen-Erkennung
+              {verificationFailedTasks && verificationFailedTasks.length > 0 && (
+                <Badge variant="destructive" className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {verificationFailedTasks.length}
+                </Badge>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="tasks" className="flex-1 flex flex-col overflow-hidden">
@@ -555,6 +598,56 @@ export default function TaskDistribution() {
                 ) : (
                   <div className="text-center py-12 text-muted-foreground">
                     Keine Angebote mit Erinnerungen gefunden
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="verification" className="flex-1 overflow-auto">
+            <div className="mb-4">
+              <FilterControls />
+            </div>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                  <CardTitle className="text-xl text-red-600">Nicht verifizierte Käufe</CardTitle>
+                  <Badge variant="destructive">{
+                    verificationFailedTasks?.filter(t =>
+                      selectedRepId === "all" || t.rep_id?.toString() === selectedRepId
+                    ).filter(t => !removedTaskIds.includes(t.task_id)).length || 0
+                  }</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Diese Käufe wurden vom Außendienst gemeldet, aber nicht durch Bestellungen bestätigt.
+                </p>
+              </CardHeader>
+              <CardContent>
+                {verificationLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[1, 2, 3].map(i => <Skeleton key={i} className="h-64" />)}
+                  </div>
+                ) : verificationFailedTasks && verificationFailedTasks
+                    .filter(t => selectedRepId === "all" || t.rep_id?.toString() === selectedRepId)
+                    .filter(t => !removedTaskIds.includes(t.task_id))
+                    .length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {verificationFailedTasks
+                      .filter(t => selectedRepId === "all" || t.rep_id?.toString() === selectedRepId)
+                      .filter(t => !removedTaskIds.includes(t.task_id))
+                      .map(task => (
+                        <VerificationFailedCard
+                          key={task.task_id}
+                          task={task}
+                          onComplete={handleVerificationFailedComplete}
+                        />
+                      ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-muted-foreground">
+                    Keine nicht-verifizierten Käufe gefunden
                   </div>
                 )}
               </CardContent>
