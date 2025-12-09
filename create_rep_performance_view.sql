@@ -29,9 +29,22 @@ SELECT
         COUNT(DISTINCT dt.task_id) FILTER (
             WHERE dt.task_type = 'promo' 
             AND dt.status = 'CLAIMED' 
+            AND dt.last_change >= CURRENT_DATE - INTERVAL '14 days'
+        )::numeric / 14.0, 2
+    ) AS tasks_per_day_14d,
+    ROUND(
+        COUNT(DISTINCT dt.task_id) FILTER (
+            WHERE dt.task_type = 'promo' 
+            AND dt.status = 'CLAIMED' 
             AND dt.last_change >= CURRENT_DATE - INTERVAL '30 days'
         )::numeric / 30.0, 2
-    ) AS tasks_per_day_30d
+    ) AS tasks_per_day_30d,
+    ROUND(
+        COUNT(DISTINCT dt.task_id) FILTER (
+            WHERE dt.task_type = 'promo' 
+            AND dt.status = 'CLAIMED' 
+        )::numeric / GREATEST(DATE_PART('day', NOW() - MIN(dt.last_change)), 1), 2
+    ) AS tasks_per_day_all
 FROM reps r
 LEFT JOIN dim_customers c ON r.rep_id = c.rep_id
 LEFT JOIN dashboard_tasks dt ON c.kunden_nummer = dt.kunden_nummer

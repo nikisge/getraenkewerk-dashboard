@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DashboardTask } from "@/hooks/useDashboardTasks";
-import { Building2, MapPin, Calendar, Check, FileText, X, AlertTriangle, ArrowRightLeft } from "lucide-react";
+import { Building2, MapPin, Calendar, Check, FileText, X, AlertTriangle, ArrowRightLeft, Clock } from "lucide-react";
 import { useState } from "react";
 import { ChurnReasonDialog } from "@/components/ChurnReasonDialog";
 import { RejectionReasonDialog } from "@/components/RejectionReasonDialog";
@@ -54,9 +54,15 @@ export function TaskCard({ task, onComplete, onTransfer, showMobileTransfer }: T
     handleAction("DECLINED", reason, note);
   };
 
-  const handleOfferSubmit = (reminderDate: string) => {
-    // Set status to OFFER and set reminder_date
-    handleAction("OFFER", undefined, undefined, reminderDate);
+  const handleOfferSubmit = (action: string, reminderDate?: string, reason?: string, note?: string) => {
+    // Handle different actions from OfferDialog
+    if (action === "OFFER" && reminderDate) {
+      handleAction("OFFER", undefined, undefined, reminderDate);
+    } else if (action === "CLAIMED") {
+      handleAction("CLAIMED");
+    } else if (action === "DECLINED") {
+      handleAction("DECLINED", reason, note);
+    }
   };
 
   const renderPromoActions = () => (
@@ -120,9 +126,14 @@ export function TaskCard({ task, onComplete, onTransfer, showMobileTransfer }: T
         onUpdate={(updates) => {
           updateCustomer.mutate({
             kunden_nummer: task.kunden_nummer || 0,
-            updates: updates,
+            updates: { ...updates, churn_alert_pending: false },
           }, {
-            onSuccess: () => toast.success("Kaufintervall aktualisiert"),
+            onSuccess: () => {
+              toast.success("Kaufintervall aktualisiert");
+              // Trigger removal animation/callback if needed, but the optimistic update might be enough
+              // if the parent list filters by churn_alert_pending
+              handleAction("RETAINED"); // Treat as retained/handled to remove from view
+            },
             onError: () => toast.error("Fehler beim Aktualisieren"),
           });
         }}
@@ -198,6 +209,21 @@ export function TaskCard({ task, onComplete, onTransfer, showMobileTransfer }: T
               {task.task_type === 'promo' && `Neuer Artikel: ${task.title || 'Kampagne'}`}
               {task.task_type === 'churn' && (task.firma || 'Kunde')}
             </h3>
+            {task.task_type === 'churn' && (task.last_purchase_date || (task as any).days_since_last_order) && (
+              <div className="mt-2">
+                <Badge variant="outline" className="border-red-500 text-red-600 bg-red-50 w-fit max-w-full">
+                  <Clock className="mr-1 h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">
+                    {(task as any).days_since_last_order
+                      ? `Kauf vor ${(task as any).days_since_last_order} Tagen`
+                      : (task.last_purchase_date
+                        ? `Kauf am ${new Date(task.last_purchase_date).toLocaleDateString("de-DE")}`
+                        : 'Kaufdatum unbekannt')
+                    }
+                  </span>
+                </Badge>
+              </div>
+            )}
           </div>
 
           {/* Customer Details */}

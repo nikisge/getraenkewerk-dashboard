@@ -23,6 +23,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { DashboardTask } from "@/hooks/useDashboardTasksAdmin";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { OfferDialog } from "@/components/OfferDialog";
 
 export default function TaskDistribution() {
   const [selectedRepId, setSelectedRepId] = useState<string>("all");
@@ -35,6 +36,7 @@ export default function TaskDistribution() {
   const [isReminderDialogOpen, setIsReminderDialogOpen] = useState(false);
   const [selectedReminderDate, setSelectedReminderDate] = useState<Date | undefined>();
   const [activeReminderTaskId, setActiveReminderTaskId] = useState<string>("");
+  const [editingOfferTask, setEditingOfferTask] = useState<DashboardTask | null>(null);
 
   const { data: allTasks, isLoading: tasksLoading } = useDashboardTasksAdmin();
   const { data: reps, isLoading: repsLoading } = useReps();
@@ -183,6 +185,35 @@ export default function TaskDistribution() {
       console.error("Error setting reminder:", error);
       toast.error("Fehler beim Setzen der Erinnerung");
       setRemovedTaskIds(prev => prev.filter(id => id !== activeReminderTaskId));
+    }
+  };
+
+  const handleOfferEdit = async (action: string, reminderDate?: string, reason?: string, note?: string) => {
+    if (!editingOfferTask) return;
+
+    try {
+      if (action === "OFFER" && reminderDate) {
+        await updateTaskMutation.mutateAsync({
+          id: editingOfferTask.task_id || "",
+          updates: { reminder_date: reminderDate },
+        });
+        toast.success("Erinnerungsdatum aktualisiert");
+      } else if (action === "CLAIMED") {
+        await updateTaskMutation.mutateAsync({
+          id: editingOfferTask.task_id || "",
+          updates: { status: "CLAIMED", verified_by_sales: true, reminder_date: null },
+        });
+        toast.success("Angebot als gekauft markiert");
+      } else if (action === "DECLINED") {
+        await updateTaskMutation.mutateAsync({
+          id: editingOfferTask.task_id || "",
+          updates: { status: "DECLINED", verified_by_sales: true, failure_reason: reason, notitz_rep: note, reminder_date: null },
+        });
+        toast.success("Angebot als abgelehnt markiert");
+      }
+      setEditingOfferTask(null);
+    } catch (error) {
+      toast.error("Konnte nicht aktualisiert werden");
     }
   };
 
@@ -383,6 +414,17 @@ export default function TaskDistribution() {
         </DialogContent>
       </Dialog>
 
+      {/* Offer Edit Dialog */}
+      {editingOfferTask && (
+        <OfferDialog
+          isOpen={!!editingOfferTask}
+          onClose={() => setEditingOfferTask(null)}
+          onSubmit={handleOfferEdit}
+          customerName={editingOfferTask.firma || "Kunde"}
+          initialDate={editingOfferTask.reminder_date ? new Date(editingOfferTask.reminder_date) : undefined}
+        />
+      )}
+
       <div className="flex h-full w-full max-w-[100vw] overflow-x-hidden flex-col p-4 sm:p-6">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl sm:text-3xl font-bold">Aufgaben Verteilung</h1>
@@ -491,7 +533,11 @@ export default function TaskDistribution() {
                         const isDue = reminderDate <= today;
 
                         return (
-                          <TableRow key={task.task_id}>
+                          <TableRow
+                            key={task.task_id}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => setEditingOfferTask(task)}
+                          >
                             <TableCell className="font-medium">{task.rep_name}</TableCell>
                             <TableCell>{task.firma}</TableCell>
                             <TableCell>{task.title}</TableCell>

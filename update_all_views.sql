@@ -15,6 +15,7 @@ SELECT
     t.note,
     t.verified_by_sales,
     t.last_purchase_date,
+    c.days_since_last_order,
     t.last_change,
     t.notitz_rep,
     t.reminder_date,
@@ -55,7 +56,8 @@ SELECT
     COALESCE(cb.action, 'PENDING') AS status,
     cb.note,
     CASE WHEN cb.action IN ('RETAINED', 'LOST') THEN true ELSE false END AS verified_by_sales,
-    NULL AS last_purchase_date,
+    c.last_order_date AS last_purchase_date,
+    c.days_since_last_order,
     COALESCE(cb.created_at, c.updated_at, NOW()) AS last_change,
     cb.note AS notitz_rep,
     NULL AS reminder_date,
@@ -111,9 +113,22 @@ SELECT
         COUNT(DISTINCT dt.task_id) FILTER (
             WHERE dt.task_type = 'promo' 
             AND dt.status = 'CLAIMED' 
+            AND dt.last_change >= CURRENT_DATE - INTERVAL '14 days'
+        )::numeric / 14.0, 2
+    ) AS tasks_per_day_14d,
+    ROUND(
+        COUNT(DISTINCT dt.task_id) FILTER (
+            WHERE dt.task_type = 'promo' 
+            AND dt.status = 'CLAIMED' 
             AND dt.last_change >= CURRENT_DATE - INTERVAL '30 days'
         )::numeric / 30.0, 2
-    ) AS tasks_per_day_30d
+    ) AS tasks_per_day_30d,
+    ROUND(
+        COUNT(DISTINCT dt.task_id) FILTER (
+            WHERE dt.task_type = 'promo' 
+            AND dt.status = 'CLAIMED' 
+        )::numeric / GREATEST(DATE_PART('day', NOW() - MIN(dt.last_change)), 1)::numeric, 2
+    ) AS tasks_per_day_all
 FROM reps r
 LEFT JOIN dim_customers c ON r.rep_id = c.rep_id
 LEFT JOIN dashboard_tasks dt ON c.kunden_nummer = dt.kunden_nummer

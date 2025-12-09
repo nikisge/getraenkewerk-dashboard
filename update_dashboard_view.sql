@@ -50,7 +50,7 @@ SELECT
     COALESCE(cb.action, 'PENDING') AS status,
     cb.note,
     CASE WHEN cb.action IN ('RETAINED', 'LOST') THEN true ELSE false END AS verified_by_sales,
-    NULL AS last_purchase_date,
+    c.last_order_date AS last_purchase_date,
     COALESCE(cb.created_at, c.updated_at, NOW()) AS last_change,
     cb.note AS notitz_rep,
     NULL AS reminder_date,

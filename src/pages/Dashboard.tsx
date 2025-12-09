@@ -30,7 +30,8 @@ export default function Dashboard() {
   const { data: tasks, isLoading: tasksLoading } = useRepTasks(selectedRepId);
   const { data: performance, isLoading: perfLoading } = useRepPerformanceById(selectedRepId);
   const { data: allPerformance, isLoading: allPerfLoading } = useRepPerformance();
-  const { data: completedActivities, isLoading: activitiesLoading } = useRepCompletedActivities(selectedRepId);
+  const [activityDays, setActivityDays] = useState<string>("7");
+  const { data: completedActivities, isLoading: activitiesLoading } = useRepCompletedActivities(selectedRepId, parseInt(activityDays));
   const updateTask = useUpdateTask();
   const { toast } = useToast();
 
@@ -303,8 +304,19 @@ export default function Dashboard() {
               </div>
 
               <Card>
-                <CardHeader>
-                  <CardTitle>Bearbeitete Aufgaben (letzte 7 Tage)</CardTitle>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle>Bearbeitete Aufgaben</CardTitle>
+                  <Select value={activityDays} onValueChange={setActivityDays}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Zeitraum wählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="7">Letzte 7 Tage</SelectItem>
+                      <SelectItem value="14">Letzte 14 Tage</SelectItem>
+                      <SelectItem value="31">Letzte 31 Tage</SelectItem>
+                      <SelectItem value="365">Gesamter Zeitraum</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </CardHeader>
                 <CardContent>
                   {activitiesLoading ? (
@@ -317,14 +329,15 @@ export default function Dashboard() {
                           <TableHead>Kunde</TableHead>
                           <TableHead>Typ</TableHead>
                           <TableHead>Aktion</TableHead>
+                          <TableHead>Grund</TableHead>
                           <TableHead>Notiz</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {completedActivities?.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={5} className="text-center text-muted-foreground">
-                              Keine bearbeiteten Aufgaben in den letzten 7 Tagen
+                            <TableCell colSpan={6} className="text-center text-muted-foreground">
+                              Keine bearbeiteten Aufgaben im gewählten Zeitraum
                             </TableCell>
                           </TableRow>
                         ) : (
@@ -359,6 +372,9 @@ export default function Dashboard() {
                                 </span>
                               </TableCell>
                               <TableCell className="max-w-xs truncate">
+                                {activity.reason || "-"}
+                              </TableCell>
+                              <TableCell className="max-w-xs truncate">
                                 {activity.note || "-"}
                               </TableCell>
                             </TableRow>
@@ -373,6 +389,6 @@ export default function Dashboard() {
           )}
         </div>
       </div>
-    </div>
+    </div >
   );
 }

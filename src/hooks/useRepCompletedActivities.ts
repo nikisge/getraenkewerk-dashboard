@@ -8,18 +8,19 @@ export interface CompletedActivity {
     campaign_or_type: string;
     action: string;
     note: string | null;
+    reason: string | null;
     kunden_nummer: number;
 }
 
-export function useRepCompletedActivities(repId: number | null) {
+export function useRepCompletedActivities(repId: number | null, days: number = 7) {
     return useQuery({
-        queryKey: ["rep-completed-activities", repId],
+        queryKey: ["rep-completed-activities", repId, days],
         queryFn: async () => {
             if (!repId) return [];
 
-            const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-            const sevenDaysAgoStr = sevenDaysAgo.toISOString();
+            const dateFilter = new Date();
+            dateFilter.setDate(dateFilter.getDate() - days);
+            const dateFilterStr = dateFilter.toISOString();
 
             // Fetch completed campaign tasks for this rep
             const { data: campaignTasks, error: campaignError } = await supabase
@@ -29,12 +30,13 @@ export function useRepCompletedActivities(repId: number | null) {
           status,
           last_change,
           notitz_rep,
+          failure_reason,
           kunden_nummer,
           campaign_code,
           campaigns:campaign_code (name),
           dim_customers!inner (firma, rep_id)
         `)
-                .gte("last_change", sevenDaysAgoStr)
+                .gte("last_change", dateFilterStr)
                 .eq("verified_by_sales", true)
                 .eq("dim_customers.rep_id", repId)
                 .in("status", ["CLAIMED", "OFFER", "DECLINED"])
@@ -57,7 +59,7 @@ export function useRepCompletedActivities(repId: number | null) {
           Churn_Grund,
           dim_customers!inner (firma, rep_id)
         `)
-                .gte("created_at", sevenDaysAgoStr)
+                .gte("created_at", dateFilterStr)
                 .eq("dim_customers.rep_id", repId)
                 .in("action", ["RETAINED", "LOST"])
                 .order("created_at", { ascending: false });
@@ -75,6 +77,7 @@ export function useRepCompletedActivities(repId: number | null) {
                 campaign_or_type: (task.campaigns as any)?.name || task.campaign_code || "Campaign",
                 action: getActionLabel(task.status),
                 note: task.notitz_rep,
+                reason: task.failure_reason,
                 kunden_nummer: task.kunden_nummer
             }));
 
@@ -85,7 +88,8 @@ export function useRepCompletedActivities(repId: number | null) {
                 customer_name: (task.dim_customers as any)?.firma || "Unknown",
                 campaign_or_type: "Churn Alert",
                 action: getActionLabel(task.action),
-                note: task.note || task.Churn_Grund || null,
+                note: task.note,
+                reason: task.Churn_Grund,
                 kunden_nummer: task.kunden_nummer
             }));
 

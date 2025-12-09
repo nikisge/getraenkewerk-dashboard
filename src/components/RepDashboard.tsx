@@ -20,6 +20,8 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { OfferCard } from "@/components/OfferCard";
 import { CampaignCard } from "@/components/CampaignCard";
+import { OfferDialog } from "@/components/OfferDialog";
+import { DashboardTask } from "@/hooks/useDashboardTasks";
 
 export function RepDashboard() {
   const { rep } = useAuth();
@@ -34,6 +36,7 @@ export function RepDashboard() {
   const [isReminderDialogOpen, setIsReminderDialogOpen] = useState(false);
   const [selectedReminderDate, setSelectedReminderDate] = useState<Date | undefined>();
   const [activeTaskId, setActiveTaskId] = useState<string>("");
+  const [editingOfferTask, setEditingOfferTask] = useState<DashboardTask | null>(null);
 
   const handleTaskComplete = async (taskId: string, taskType: string, action: string, failureReason?: string, note?: string, reminderDate?: string) => {
     try {
@@ -157,6 +160,35 @@ export function RepDashboard() {
     }
   };
 
+  const handleOfferEdit = async (action: string, reminderDate?: string, reason?: string, note?: string) => {
+    if (!editingOfferTask) return;
+
+    try {
+      if (action === "OFFER" && reminderDate) {
+        await updateTask.mutateAsync({
+          id: editingOfferTask.task_id || "",
+          updates: { reminder_date: reminderDate },
+        });
+        toast.success("Erinnerungsdatum aktualisiert");
+      } else if (action === "CLAIMED") {
+        await updateTask.mutateAsync({
+          id: editingOfferTask.task_id || "",
+          updates: { status: "CLAIMED", verified_by_sales: true, reminder_date: null },
+        });
+        toast.success("Angebot als gekauft markiert");
+      } else if (action === "DECLINED") {
+        await updateTask.mutateAsync({
+          id: editingOfferTask.task_id || "",
+          updates: { status: "DECLINED", verified_by_sales: true, failure_reason: reason, notitz_rep: note, reminder_date: null },
+        });
+        toast.success("Angebot als abgelehnt markiert");
+      }
+      setEditingOfferTask(null);
+    } catch (error) {
+      toast.error("Konnte nicht aktualisiert werden");
+    }
+  };
+
   // Filter out removed tasks
   const availableTasks = tasks?.filter(task => !removedTaskIds.includes(task.task_id || ""));
 
@@ -221,6 +253,17 @@ export function RepDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Offer Edit Dialog */}
+      {editingOfferTask && (
+        <OfferDialog
+          isOpen={!!editingOfferTask}
+          onClose={() => setEditingOfferTask(null)}
+          onSubmit={handleOfferEdit}
+          customerName={editingOfferTask.firma || "Kunde"}
+          initialDate={editingOfferTask.reminder_date ? new Date(editingOfferTask.reminder_date) : undefined}
+        />
+      )}
 
       <h2 className="text-2xl font-bold">Dashboard</h2>
 
@@ -290,7 +333,11 @@ export function RepDashboard() {
                           const isDue = reminderDate <= today;
 
                           return (
-                            <TableRow key={task.task_id} className={isDue ? 'bg-red-50' : ''}>
+                            <TableRow
+                              key={task.task_id}
+                              className={isDue ? 'bg-red-50 cursor-pointer hover:bg-red-100' : 'cursor-pointer hover:bg-muted/50'}
+                              onClick={() => setEditingOfferTask(task)}
+                            >
                               <TableCell className="font-medium">{task.firma}</TableCell>
                               <TableCell>{task.title}</TableCell>
                               <TableCell>{task.last_change ? new Date(task.last_change).toLocaleDateString('de-DE') : '-'}</TableCell>
