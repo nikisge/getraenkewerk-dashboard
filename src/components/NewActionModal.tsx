@@ -15,14 +15,21 @@ export function NewActionModal() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
+    const imageUrl = (formData.get("image_url") as string)?.trim();
+
+    const actionData = {
+      product_name: formData.get("product_name") as string,
+      promo_from: (formData.get("promo_from") as string) || null,
+      promo_to: (formData.get("promo_to") as string) || null,
+      price: formData.get("price") ? parseFloat(formData.get("price") as string) : null,
+      image: imageUrl || null,
+    };
+
+    console.log("Creating action with data:", actionData);
+
     try {
-      await createAction.mutateAsync({
-        product_name: formData.get("product_name") as string,
-        promo_from: formData.get("promo_from") as string || null,
-        promo_to: formData.get("promo_to") as string || null,
-        price: formData.get("price") ? parseFloat(formData.get("price") as string) : null,
-        image: formData.get("image_url") as string || null,
-      });
+      const result = await createAction.mutateAsync(actionData);
+      console.log("Action created:", result);
 
       toast.success("Aktion erfolgreich erstellt");
       setOpen(false);

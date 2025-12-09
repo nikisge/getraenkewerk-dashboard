@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TaskListView } from "@/components/TaskListView";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, X, Megaphone } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import { OfferCard } from "@/components/OfferCard";
 import { CampaignCard } from "@/components/CampaignCard";
 import { OfferDialog } from "@/components/OfferDialog";
 import { DashboardTask } from "@/hooks/useDashboardTasks";
+import { useSeenActions } from "@/hooks/useSeenActions";
 
 export function RepDashboard() {
   const { rep } = useAuth();
@@ -31,12 +32,24 @@ export function RepDashboard() {
   const updateTask = useUpdateTask();
   const updateChurnCallback = useUpdateChurnCallback();
   const [removedTaskIds, setRemovedTaskIds] = useState<string[]>([]);
+  const { markAllAsSeen, isUnseen } = useSeenActions();
 
   // Reminder dialog state
   const [isReminderDialogOpen, setIsReminderDialogOpen] = useState(false);
   const [selectedReminderDate, setSelectedReminderDate] = useState<Date | undefined>();
   const [activeTaskId, setActiveTaskId] = useState<string>("");
   const [editingOfferTask, setEditingOfferTask] = useState<DashboardTask | null>(null);
+
+  // New actions notification
+  const unseenActions = actions?.filter(a => isUnseen(a.id)) || [];
+  const [showNewActionsBanner, setShowNewActionsBanner] = useState(true);
+
+  const dismissNewActionsBanner = () => {
+    if (actions) {
+      markAllAsSeen(actions.map(a => a.id));
+    }
+    setShowNewActionsBanner(false);
+  };
 
   const handleTaskComplete = async (taskId: string, taskType: string, action: string, failureReason?: string, note?: string, reminderDate?: string) => {
     try {
@@ -267,6 +280,45 @@ export function RepDashboard() {
       )}
 
       <h2 className="text-2xl font-bold">Dashboard</h2>
+
+      {/* New Actions Banner */}
+      {showNewActionsBanner && unseenActions.length > 0 && (
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-4 shadow-lg animate-in slide-in-from-top duration-300">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="bg-white/20 rounded-full p-2 mt-0.5">
+                <Megaphone className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg">
+                  {unseenActions.length === 1 ? "Neue Aktion verfügbar!" : `${unseenActions.length} neue Aktionen verfügbar!`}
+                </h3>
+                <p className="text-blue-100 text-sm mt-1">
+                  {unseenActions.slice(0, 3).map(a => a.product_name).join(", ")}
+                  {unseenActions.length > 3 && ` und ${unseenActions.length - 3} weitere...`}
+                </p>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="mt-3 bg-white text-blue-600 hover:bg-blue-50"
+                  onClick={() => {
+                    handleTabChange("actions");
+                    dismissNewActionsBanner();
+                  }}
+                >
+                  Aktionen ansehen
+                </Button>
+              </div>
+            </div>
+            <button
+              onClick={dismissNewActionsBanner}
+              className="text-white/80 hover:text-white transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="hidden md:flex">

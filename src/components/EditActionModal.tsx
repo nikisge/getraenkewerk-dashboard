@@ -22,16 +22,17 @@ export function EditActionModal({ action, open, onOpenChange }: EditActionModalP
         if (!action) return;
 
         const formData = new FormData(e.currentTarget);
+        const imageUrl = (formData.get("image_url") as string)?.trim();
 
         try {
             updateAction.mutate({
                 id: action.id,
                 updates: {
                     product_name: formData.get("product_name") as string,
-                    promo_from: formData.get("promo_from") as string || null,
-                    promo_to: formData.get("promo_to") as string || null,
+                    promo_from: (formData.get("promo_from") as string) || null,
+                    promo_to: (formData.get("promo_to") as string) || null,
                     price: formData.get("price") ? parseFloat(formData.get("price") as string) : null,
-                    image: formData.get("image_url") as string || null,
+                    image: imageUrl || null,
                 }
             }, {
                 onSuccess: () => {

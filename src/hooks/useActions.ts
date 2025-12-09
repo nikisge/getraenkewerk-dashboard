@@ -72,13 +72,19 @@ export function useUpdateAction() {
 
   return useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: Partial<Action> }) => {
-      const { data, error } = await supabase
+      console.log("Updating action", id, "with:", updates);
+
+      const { data, error, count } = await supabase
         .from("actions")
         .update(updates)
         .eq("id", id)
-        .select();
+        .select()
+        .single();
+
+      console.log("Update response:", { data, error, count });
 
       if (error) throw error;
+      if (!data) throw new Error("Update fehlgeschlagen - keine Daten zurückgegeben. Möglicherweise RLS-Problem.");
       return data;
     },
     onSuccess: () => {

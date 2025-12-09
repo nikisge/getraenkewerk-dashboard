@@ -4,26 +4,68 @@ import { Tables, TablesInsert } from "@/integrations/supabase/types";
 
 export type Customer = Tables<"dim_customers">;
 
-export function useCustomers(searchTerm: string = "") {
+export interface CustomerFilters {
+  searchTerm?: string;
+  repId?: number | null;
+  statusActive?: boolean | null;
+  abcClass?: string | null;
+}
+
+export interface PaginationParams {
+  page: number;
+  pageSize: number;
+}
+
+export interface CustomersResult {
+  customers: Customer[];
+  totalCount: number;
+  totalPages: number;
+}
+
+export function useCustomers(
+  filters: CustomerFilters = {},
+  pagination: PaginationParams = { page: 0, pageSize: 50 }
+) {
   return useQuery({
-    queryKey: ["customers", searchTerm],
-    queryFn: async () => {
+    queryKey: ["customers", filters, pagination],
+    queryFn: async (): Promise<CustomersResult> => {
+      const { searchTerm, repId, statusActive, abcClass } = filters;
+      const { page, pageSize } = pagination;
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+
+      // Single query with count - much faster!
       let query = supabase
         .from("dim_customers")
-        .select("*")
-        .order("firma");
-      
-      if (searchTerm) {
-        const trimmedSearch = searchTerm.trim();
-        // Search by company name (firma)
-        query = query.ilike("firma", `%${trimmedSearch}%`);
+        .select("kunden_nummer, firma, email, ort, rep_id, purchase_interval, season_start, season_end, status_active, abc_class, revenue_365d", { count: "exact" })
+        .order("firma")
+        .range(from, to);
+
+      // Apply filters
+      if (searchTerm?.trim()) {
+        query = query.ilike("firma", `%${searchTerm.trim()}%`);
       }
-      
-      const { data, error } = await query;
-      
+      if (repId !== undefined && repId !== null) {
+        query = query.eq("rep_id", repId);
+      }
+      if (statusActive !== undefined && statusActive !== null) {
+        query = query.eq("status_active", statusActive);
+      }
+      if (abcClass) {
+        query = query.eq("abc_class", abcClass);
+      }
+
+      const { data, count, error } = await query;
       if (error) throw error;
-      return data as Customer[];
+
+      return {
+        customers: data as Customer[],
+        totalCount: count || 0,
+        totalPages: Math.ceil((count || 0) / pageSize),
+      };
     },
+    staleTime: 30000, // Cache for 30 seconds
+    gcTime: 60000, // Keep in cache for 1 minute
   });
 }
 
