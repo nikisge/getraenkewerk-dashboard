@@ -23,7 +23,7 @@ export function CustomerCard({
     onIntervalUpdate
 }: CustomerCardProps) {
     return (
-        <Card className="mb-4">
+        <Card className="mb-4 cursor-pointer hover:bg-muted/50 transition-colors">
             <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                     <div>
@@ -45,11 +45,11 @@ export function CustomerCard({
                 <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-muted-foreground" />
-                        <span className="truncate">{customer.email}</span>
+                        <span className="truncate">{customer.email || "-"}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span>{customer.ort}</span>
+                        <span>{customer.ort || "-"}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <Euro className="h-4 w-4 text-muted-foreground" />
@@ -60,7 +60,7 @@ export function CustomerCard({
                 </div>
 
                 {/* Actions */}
-                <div className="space-y-3 pt-2 border-t">
+                <div className="space-y-3 pt-2 border-t" onClick={(e) => e.stopPropagation()}>
                     {/* Sales Rep Selection */}
                     <div className="space-y-1">
                         <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">

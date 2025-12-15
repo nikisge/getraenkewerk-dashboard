@@ -19,6 +19,22 @@ import {
 import { toast } from "sonner";
 import { Settings2 } from "lucide-react";
 
+// Helper functions to convert between DB format (MM-DD) and German format (TT.MM)
+const dbToGerman = (dbDate: string | null | undefined): string => {
+    if (!dbDate) return "";
+    // MM-DD -> TT.MM
+    const parts = dbDate.split("-");
+    if (parts.length !== 2) return dbDate;
+    return `${parts[1]}.${parts[0]}`;
+};
+
+const germanToDb = (germanDate: string): string => {
+    // TT.MM -> MM-DD
+    const parts = germanDate.split(".");
+    if (parts.length !== 2) return germanDate;
+    return `${parts[1]}-${parts[0]}`;
+};
+
 interface PurchaseIntervalSettingsProps {
     kundenNummer: number;
     currentInterval: number | string | null;
@@ -56,8 +72,9 @@ export function PurchaseIntervalSettings({
             ? currentInterval.toString()
             : "10"
     );
-    const [seasonStartDate, setSeasonStartDate] = useState<string>(seasonStart || "04-01");
-    const [seasonEndDate, setSeasonEndDate] = useState<string>(seasonEnd || "09-30");
+    // Store dates in German format (TT.MM) for display
+    const [seasonStartDate, setSeasonStartDate] = useState<string>(dbToGerman(seasonStart) || "01.04");
+    const [seasonEndDate, setSeasonEndDate] = useState<string>(dbToGerman(seasonEnd) || "30.09");
     const [seasonalDays, setSeasonalDays] = useState<string>(
         (seasonStart && seasonEnd && currentInterval)
             ? currentInterval.toString()
@@ -100,16 +117,16 @@ export function PurchaseIntervalSettings({
                 toast.error("Bitte geben Sie ein gültiges Saison-Intervall ein.");
                 return;
             }
-            // Validate date format MM-DD
-            const dateRegex = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+            // Validate date format TT.MM (German)
+            const dateRegex = /^(0[1-9]|[12]\d|3[01])\.(0[1-9]|1[0-2])$/;
             if (!dateRegex.test(seasonStartDate) || !dateRegex.test(seasonEndDate)) {
-                toast.error("Bitte verwenden Sie das Datumsformat MM-TT (z.B. 04-01).");
+                toast.error("Bitte verwenden Sie das Datumsformat TT.MM (z.B. 01.04).");
                 return;
             }
 
-            // Store seasonal data
-            updates.season_start = seasonStartDate;
-            updates.season_end = seasonEndDate;
+            // Convert German format to DB format (MM-DD) for storage
+            updates.season_start = germanToDb(seasonStartDate);
+            updates.season_end = germanToDb(seasonEndDate);
             updates.purchase_interval = days; // Store interval days in purchase_interval
         } else {
             // Standard intervals: 7, 14, 21, 28
@@ -173,26 +190,26 @@ export function PurchaseIntervalSettings({
                         <>
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="season-start" className="text-right">
-                                    Start (MM-TT)
+                                    Start (TT.MM)
                                 </Label>
                                 <Input
                                     id="season-start"
                                     value={seasonStartDate}
                                     onChange={(e) => setSeasonStartDate(e.target.value)}
                                     className="col-span-3"
-                                    placeholder="04-01"
+                                    placeholder="01.04"
                                 />
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="season-end" className="text-right">
-                                    Ende (MM-TT)
+                                    Ende (TT.MM)
                                 </Label>
                                 <Input
                                     id="season-end"
                                     value={seasonEndDate}
                                     onChange={(e) => setSeasonEndDate(e.target.value)}
                                     className="col-span-3"
-                                    placeholder="09-30"
+                                    placeholder="30.09"
                                 />
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
