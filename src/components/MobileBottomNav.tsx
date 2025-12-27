@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, ClipboardList, Target, Users, FileText, Zap } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Target, Users, FileText, Zap, Navigation } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -7,7 +7,8 @@ export function MobileBottomNav() {
   const { rep } = useAuth();
 
   const allNavItems = [
-    { to: "/", icon: LayoutDashboard, label: "Außendienst", roles: ['admin', 'rep'] },
+    { to: "/", icon: LayoutDashboard, label: "Dashboard", roles: ['admin', 'rep'] },
+    { to: "/routes", icon: Navigation, label: "Routen", roles: ['admin', 'rep'] },
     { to: "/task-distribution", icon: ClipboardList, label: "Verteilung", roles: ['admin'] },
     { to: "/campaigns", icon: Target, label: "Campaigns", roles: ['admin'] },
     { to: "/customers", icon: Users, label: "Kunden", roles: ['admin'] },
@@ -15,10 +16,9 @@ export function MobileBottomNav() {
 
   const navItems = rep?.role === 'rep'
     ? [
-      { to: "/?tab=tasks", icon: ClipboardList, label: "Aufgaben" },
-      { to: "/?tab=offers", icon: FileText, label: "Angebote" },
-      { to: "/?tab=actions", icon: Zap, label: "Aktionen" },
-      { to: "/?tab=campaigns", icon: Target, label: "Kampagnen" },
+      { to: "/", icon: LayoutDashboard, label: "Dashboard" },
+      { to: "/routes", icon: Navigation, label: "Routen" },
+      { to: "/?tab=customers", icon: Users, label: "Kunden" },
     ]
     : allNavItems.filter(item => item.roles.includes(rep?.role || 'rep'));
 

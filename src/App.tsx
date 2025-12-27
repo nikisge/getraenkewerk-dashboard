@@ -12,6 +12,7 @@ import Campaigns from "./pages/Campaigns";
 import Customers from "./pages/Customers";
 import TaskDistribution from "./pages/TaskDistribution";
 import CampaignPerformance from "./pages/CampaignPerformance";
+import RoutePlanning from "./pages/RoutePlanning";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -27,6 +28,7 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+            <Route path="/routes" element={<ProtectedRoute><Layout><RoutePlanning /></Layout></ProtectedRoute>} />
             <Route path="/campaigns" element={<ProtectedRoute><AdminRoute><Layout><Campaigns /></Layout></AdminRoute></ProtectedRoute>} />
             <Route path="/customers" element={<ProtectedRoute><AdminRoute><Layout><Customers /></Layout></AdminRoute></ProtectedRoute>} />
             <Route path="/task-distribution" element={<ProtectedRoute><AdminRoute><Layout><TaskDistribution /></Layout></AdminRoute></ProtectedRoute>} />

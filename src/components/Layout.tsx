@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Target, Users, LogOut, ClipboardList, Menu, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Target, Users, LogOut, ClipboardList, Menu, BarChart3, Navigation } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ export function Layout({ children }: LayoutProps) {
   // Filter nav items based on role
   const allNavItems = [
     { to: "/", icon: LayoutDashboard, label: "Außendienst", roles: ['admin', 'rep'] },
+    { to: "/routes", icon: Navigation, label: "Routenplanung", roles: ['admin', 'rep'] },
     { to: "/task-distribution", icon: ClipboardList, label: "Aufgaben Verteilung", roles: ['admin'] },
     { to: "/campaigns", icon: Target, label: "Campaigns", roles: ['admin'] },
     { to: "/campaign-performance", icon: BarChart3, label: "Kampagnen Performance", roles: ['admin'] },

@@ -8,13 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TaskListView } from "@/components/TaskListView";
-import { Calendar as CalendarIcon, X, Megaphone } from "lucide-react";
+import { Calendar as CalendarIcon, X, Megaphone, Phone, Mail, MapPin, Search, Clock, Pencil } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -23,12 +24,20 @@ import { CampaignCard } from "@/components/CampaignCard";
 import { OfferDialog } from "@/components/OfferDialog";
 import { DashboardTask } from "@/hooks/useDashboardTasks";
 import { useSeenActions } from "@/hooks/useSeenActions";
+import { useCustomers, Customer } from "@/hooks/useCustomers";
+import { EditCustomerModal } from "@/components/EditCustomerModal";
+import { OpeningHoursDisplay } from "@/components/OpeningHoursDisplay";
 
 export function RepDashboard() {
   const { rep } = useAuth();
   const { data: tasks, isLoading: tasksLoading } = useDashboardTasks(rep?.auth_token);
   const { data: actions, isLoading: actionsLoading } = useActions();
   const { data: campaigns, isLoading: campaignsLoading } = useCampaigns();
+  const [customerSearch, setCustomerSearch] = useState("");
+  const { data: customersData, isLoading: customersLoading } = useCustomers(
+    { repId: rep?.rep_id, searchTerm: customerSearch },
+    { page: 0, pageSize: 100 }
+  );
   const updateTask = useUpdateTask();
   const updateChurnCallback = useUpdateChurnCallback();
   const [removedTaskIds, setRemovedTaskIds] = useState<string[]>([]);
@@ -39,6 +48,7 @@ export function RepDashboard() {
   const [selectedReminderDate, setSelectedReminderDate] = useState<Date | undefined>();
   const [activeTaskId, setActiveTaskId] = useState<string>("");
   const [editingOfferTask, setEditingOfferTask] = useState<DashboardTask | null>(null);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
   // New actions notification
   const unseenActions = actions?.filter(a => isUnseen(a.id)) || [];
@@ -279,6 +289,14 @@ export function RepDashboard() {
         />
       )}
 
+      {/* Customer Edit Modal */}
+      <EditCustomerModal
+        customer={editingCustomer}
+        isOpen={!!editingCustomer}
+        onClose={() => setEditingCustomer(null)}
+        isRepView={true}
+      />
+
       <h2 className="text-2xl font-bold">Dashboard</h2>
 
       {/* New Actions Banner */}
@@ -326,6 +344,7 @@ export function RepDashboard() {
           <TabsTrigger value="offers">Meine Angebote</TabsTrigger>
           <TabsTrigger value="actions">Aktionen</TabsTrigger>
           <TabsTrigger value="campaigns">Kampagnen</TabsTrigger>
+          <TabsTrigger value="customers">Meine Kunden</TabsTrigger>
         </TabsList>
 
         <TabsContent value="tasks" className="mt-6">
@@ -565,6 +584,151 @@ export function RepDashboard() {
           ) : (
             <Card className="p-6 text-center text-muted-foreground">
               Keine Artikel verfügbar
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="customers" className="mt-6">
+          <h2 className="text-2xl font-bold mb-4">Meine Kunden</h2>
+          <p className="text-muted-foreground mb-4">
+            Hier sehen Sie alle Kunden, die Ihnen zugeteilt sind.
+          </p>
+
+          {/* Search */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Kunde suchen..."
+              value={customerSearch}
+              onChange={(e) => setCustomerSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {customersLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-20" />
+              ))}
+            </div>
+          ) : customersData?.customers && customersData.customers.length > 0 ? (
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Kunde</TableHead>
+                      <TableHead>Ort</TableHead>
+                      <TableHead>Kontakt</TableHead>
+                      <TableHead>Öffnungszeiten</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {customersData.customers.map((customer) => {
+                      const hasOpeningHours = customer.opening_hours_mon || customer.opening_hours_tue || customer.opening_hours_wed || customer.opening_hours_thu || customer.opening_hours_fri || customer.opening_hours_sat || customer.opening_hours_sun;
+                      return (
+                        <TableRow
+                          key={customer.kunden_nummer}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => setEditingCustomer(customer)}
+                        >
+                          <TableCell>
+                            <div className="font-medium">{customer.firma || "-"}</div>
+                            <div className="text-sm text-muted-foreground">#{customer.kunden_nummer}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3 text-muted-foreground" />
+                              <span>{customer.plz} {customer.ort || "-"}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              {customer.telefon && (
+                                <div className="flex items-center gap-1 text-sm">
+                                  <Phone className="h-3 w-3" />
+                                  <span>{customer.telefon}</span>
+                                </div>
+                              )}
+                              {customer.mobil && (
+                                <div className="flex items-center gap-1 text-sm">
+                                  <Phone className="h-3 w-3" />
+                                  <span>{customer.mobil}</span>
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <OpeningHoursDisplay customer={customer} />
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditingCustomer(customer); }}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+                <div className="text-sm text-muted-foreground mt-4">
+                  {customersData.totalCount} Kunden insgesamt
+                </div>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-4">
+                {customersData.customers.map((customer) => {
+                  const hasOpeningHours = customer.opening_hours_mon || customer.opening_hours_tue || customer.opening_hours_wed || customer.opening_hours_thu || customer.opening_hours_fri || customer.opening_hours_sat || customer.opening_hours_sun;
+                  return (
+                    <Card
+                      key={customer.kunden_nummer}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => setEditingCustomer(customer)}
+                    >
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <CardTitle className="text-base">{customer.firma || "-"}</CardTitle>
+                            <p className="text-sm text-muted-foreground">#{customer.kunden_nummer}</p>
+                          </div>
+                          <Pencil className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span>{customer.plz} {customer.ort || "-"}</span>
+                        </div>
+                        {customer.telefon && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Phone className="h-4 w-4 text-muted-foreground" />
+                            <span>{customer.telefon}</span>
+                          </div>
+                        )}
+                        {customer.mobil && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Phone className="h-4 w-4 text-muted-foreground" />
+                            <span>{customer.mobil}</span>
+                          </div>
+                        )}
+                        <div className="pt-2 border-t">
+                          <OpeningHoursDisplay customer={customer} compact />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+                <div className="text-sm text-muted-foreground text-center">
+                  {customersData.totalCount} Kunden insgesamt
+                </div>
+              </div>
+            </>
+          ) : (
+            <Card className="p-6 text-center text-muted-foreground">
+              {customerSearch ? "Keine Kunden gefunden" : "Keine Kunden zugeteilt"}
             </Card>
           )}
         </TabsContent>
