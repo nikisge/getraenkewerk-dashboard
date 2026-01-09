@@ -522,7 +522,7 @@ export function RepDashboard() {
       )}
 
       <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="flex w-full overflow-x-auto no-scrollbar">
+        <TabsList className="hidden md:flex w-full overflow-x-auto no-scrollbar">
           <TabsTrigger value="tasks" className="flex-shrink-0">Meine Aufgaben</TabsTrigger>
           <TabsTrigger value="offers" className="flex-shrink-0">Meine Angebote</TabsTrigger>
           <TabsTrigger value="actions" className="flex-shrink-0">Aktionen</TabsTrigger>

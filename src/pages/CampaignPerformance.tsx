@@ -9,10 +9,13 @@ import { AlertCircle, CheckCircle, Users, XCircle, Clock, ChevronRight } from "l
 import { Progress } from "@/shared/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Badge } from "@/shared/components/ui/badge";
-import { useCampaignRejections } from "@/features/campaigns/hooks/useCampaignRejections";
+import { useCampaignRejections, useCampaignResults } from "@/features/campaigns/hooks/useCampaignRejections";
+
+type ViewMode = 'rejections' | 'sales';
 
 export default function CampaignPerformance() {
     const [selectedCampaign, setSelectedCampaign] = useState<{ code: string; name: string; reason: string | null } | null>(null);
+    const [viewMode, setViewMode] = useState<ViewMode>('rejections');
 
     const { data: campaigns, isLoading, error } = useQuery({
         queryKey: ["campaign_performance"],
@@ -31,10 +34,18 @@ export default function CampaignPerformance() {
         campaignCode: selectedCampaign?.code || null
     });
 
+    // Get all campaign results (including sales) for the selected campaign
+    const { data: allResults, isLoading: resultsLoading } = useCampaignResults(
+        selectedCampaign?.code || null
+    );
+
     // Filter rejections by selected reason (or show all if no specific reason selected)
     const filteredRejections = selectedCampaign?.reason
         ? rejections?.filter(r => r.failure_reason === selectedCampaign.reason)
         : rejections;
+
+    // Filter for sales only (CLAIMED status)
+    const salesResults = allResults?.filter(r => r.status === 'CLAIMED') || [];
 
     if (isLoading) {
         return (
@@ -138,15 +149,37 @@ export default function CampaignPerformance() {
                                 </div>
                             </div>
 
-                            {/* Results Breakdown */}
+                            {/* Results Breakdown - Clickable */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                                <div className="p-4 rounded-lg border bg-card">
+                                <div
+                                    className="p-4 rounded-lg border bg-card cursor-pointer hover:bg-green-50 dark:hover:bg-green-950/20 transition-colors"
+                                    onClick={() => {
+                                        setSelectedCampaign({
+                                            code: campaign.campaign_code || "",
+                                            name: campaign.campaign_name || "",
+                                            reason: null
+                                        });
+                                        setViewMode('sales');
+                                    }}
+                                >
                                     <p className="text-sm font-medium text-muted-foreground mb-1">Verkauft</p>
                                     <p className="text-3xl font-bold text-green-600 dark:text-green-400">{campaign.total_sales_won}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">Klicken für Details →</p>
                                 </div>
-                                <div className="p-4 rounded-lg border bg-card">
+                                <div
+                                    className="p-4 rounded-lg border bg-card cursor-pointer hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                                    onClick={() => {
+                                        setSelectedCampaign({
+                                            code: campaign.campaign_code || "",
+                                            name: campaign.campaign_name || "",
+                                            reason: null
+                                        });
+                                        setViewMode('rejections');
+                                    }}
+                                >
                                     <p className="text-sm font-medium text-muted-foreground mb-1">Abgelehnt</p>
                                     <p className="text-3xl font-bold text-red-600 dark:text-red-400">{campaign.total_rejected}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">Klicken für Details →</p>
                                 </div>
                             </div>
 
@@ -188,11 +221,14 @@ export default function CampaignPerformance() {
                                     {/* Button to see all rejections */}
                                     <button
                                         className="mt-2 text-sm text-blue-600 hover:underline"
-                                        onClick={() => setSelectedCampaign({
-                                            code: campaign.campaign_code || "",
-                                            name: campaign.campaign_name || "",
-                                            reason: null
-                                        })}
+                                        onClick={() => {
+                                            setSelectedCampaign({
+                                                code: campaign.campaign_code || "",
+                                                name: campaign.campaign_name || "",
+                                                reason: null
+                                            });
+                                            setViewMode('rejections');
+                                        }}
                                     >
                                         Alle {campaign.total_rejected} Ablehnungen anzeigen →
                                     </button>
@@ -203,13 +239,17 @@ export default function CampaignPerformance() {
                 );
             })}
 
-            {/* Rejection Details Dialog */}
+            {/* Results Details Dialog - Shows Sales or Rejections */}
             <Dialog open={!!selectedCampaign} onOpenChange={(open) => !open && setSelectedCampaign(null)}>
                 <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                            <XCircle className="h-5 w-5 text-red-600" />
-                            Ablehnungen: {selectedCampaign?.name}
+                            {viewMode === 'sales' ? (
+                                <CheckCircle className="h-5 w-5 text-green-600" />
+                            ) : (
+                                <XCircle className="h-5 w-5 text-red-600" />
+                            )}
+                            {viewMode === 'sales' ? 'Verkäufe' : 'Ablehnungen'}: {selectedCampaign?.name}
                             {selectedCampaign?.reason && (
                                 <Badge variant="secondary" className="ml-2">
                                     {selectedCampaign.reason}
@@ -219,62 +259,118 @@ export default function CampaignPerformance() {
                     </DialogHeader>
 
                     <div className="flex-1 overflow-auto">
-                        {rejectionsLoading ? (
-                            <div className="space-y-2">
-                                {[1, 2, 3].map(i => <Skeleton key={i} className="h-12" />)}
-                            </div>
-                        ) : filteredRejections && filteredRejections.length > 0 ? (
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Kunde</TableHead>
-                                        <TableHead>Ort</TableHead>
-                                        <TableHead>Außendienst</TableHead>
-                                        <TableHead>Grund</TableHead>
-                                        <TableHead>Notiz</TableHead>
-                                        <TableHead>Datum</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredRejections.map((rejection) => (
-                                        <TableRow key={rejection.task_id}>
-                                            <TableCell>
-                                                <div className="font-medium">{rejection.firma}</div>
-                                                <div className="text-xs text-muted-foreground">#{rejection.kunden_nummer}</div>
-                                            </TableCell>
-                                            <TableCell>{rejection.ort || "-"}</TableCell>
-                                            <TableCell>{rejection.rep_name}</TableCell>
-                                            <TableCell>
-                                                <Badge variant="outline" className="text-red-600 border-red-300">
-                                                    {rejection.failure_reason || "-"}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="max-w-xs">
-                                                {rejection.notitz_rep ? (
-                                                    <span className="text-sm italic text-muted-foreground">
-                                                        "{rejection.notitz_rep}"
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-muted-foreground">-</span>
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="text-sm">
-                                                {rejection.last_change
-                                                    ? new Date(rejection.last_change).toLocaleDateString("de-DE", {
-                                                        day: "2-digit",
-                                                        month: "2-digit",
-                                                        year: "numeric",
-                                                    })
-                                                    : "-"}
-                                            </TableCell>
+                        {viewMode === 'sales' ? (
+                            // Sales View
+                            resultsLoading ? (
+                                <div className="space-y-2">
+                                    {[1, 2, 3].map(i => <Skeleton key={i} className="h-12" />)}
+                                </div>
+                            ) : salesResults.length > 0 ? (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Kunde</TableHead>
+                                            <TableHead>Ort</TableHead>
+                                            <TableHead>Außendienst</TableHead>
+                                            <TableHead>Notiz</TableHead>
+                                            <TableHead>Datum</TableHead>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {salesResults.map((sale) => (
+                                            <TableRow key={sale.task_id}>
+                                                <TableCell>
+                                                    <div className="font-medium">{sale.firma}</div>
+                                                    <div className="text-xs text-muted-foreground">#{sale.kunden_nummer}</div>
+                                                </TableCell>
+                                                <TableCell>{sale.ort || "-"}</TableCell>
+                                                <TableCell>{sale.rep_name || "-"}</TableCell>
+                                                <TableCell className="max-w-xs">
+                                                    {sale.notitz_rep ? (
+                                                        <span className="text-sm italic text-muted-foreground">
+                                                            "{sale.notitz_rep}"
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-muted-foreground">-</span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-sm">
+                                                    {sale.last_change
+                                                        ? new Date(sale.last_change).toLocaleDateString("de-DE", {
+                                                            day: "2-digit",
+                                                            month: "2-digit",
+                                                            year: "numeric",
+                                                        })
+                                                        : "-"}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            ) : (
+                                <div className="text-center py-8 text-muted-foreground">
+                                    Keine Verkäufe gefunden
+                                </div>
+                            )
                         ) : (
-                            <div className="text-center py-8 text-muted-foreground">
-                                Keine Ablehnungen gefunden
-                            </div>
+                            // Rejections View
+                            rejectionsLoading ? (
+                                <div className="space-y-2">
+                                    {[1, 2, 3].map(i => <Skeleton key={i} className="h-12" />)}
+                                </div>
+                            ) : filteredRejections && filteredRejections.length > 0 ? (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Kunde</TableHead>
+                                            <TableHead>Ort</TableHead>
+                                            <TableHead>Außendienst</TableHead>
+                                            <TableHead>Grund</TableHead>
+                                            <TableHead>Notiz</TableHead>
+                                            <TableHead>Datum</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filteredRejections.map((rejection) => (
+                                            <TableRow key={rejection.task_id}>
+                                                <TableCell>
+                                                    <div className="font-medium">{rejection.firma}</div>
+                                                    <div className="text-xs text-muted-foreground">#{rejection.kunden_nummer}</div>
+                                                </TableCell>
+                                                <TableCell>{rejection.ort || "-"}</TableCell>
+                                                <TableCell>{rejection.rep_name}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline" className="text-red-600 border-red-300">
+                                                        {rejection.failure_reason || "-"}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="max-w-xs">
+                                                    {rejection.notitz_rep ? (
+                                                        <span className="text-sm italic text-muted-foreground">
+                                                            "{rejection.notitz_rep}"
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-muted-foreground">-</span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-sm">
+                                                    {rejection.last_change
+                                                        ? new Date(rejection.last_change).toLocaleDateString("de-DE", {
+                                                            day: "2-digit",
+                                                            month: "2-digit",
+                                                            year: "numeric",
+                                                        })
+                                                        : "-"}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            ) : (
+                                <div className="text-center py-8 text-muted-foreground">
+                                    Keine Ablehnungen gefunden
+                                </div>
+                            )
                         )}
                     </div>
                 </DialogContent>
