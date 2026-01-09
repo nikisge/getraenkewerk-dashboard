@@ -1,19 +1,19 @@
 import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useReps } from "@/hooks/useReps";
-import { useRepTasks } from "@/hooks/useTasks";
-import { useRepPerformance, useRepPerformanceById } from "@/hooks/useRepPerformance";
-import { useUpdateTask } from "@/hooks/useUpdateTask";
-import { NewRepModal } from "@/components/NewRepModal";
-import { RepDashboard } from "@/components/RepDashboard";
-import { useRepCompletedActivities } from "@/hooks/useRepCompletedActivities";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/features/auth/context/AuthContext";
+import { useReps } from "@/features/reps/hooks/useReps";
+import { useRepTasks } from "@/features/tasks/hooks/useTasks";
+import { useRepPerformance, useRepPerformanceById } from "@/features/dashboard/hooks/useRepPerformance";
+import { useUpdateTask } from "@/features/tasks/hooks/useUpdateTask";
+import { NewRepModal } from "@/features/reps/components/NewRepModal";
+import { RepDashboard } from "@/features/dashboard/components/RepDashboard";
+import { useRepCompletedActivities } from "@/features/dashboard/hooks/useRepCompletedActivities";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
+import { Skeleton } from "@/shared/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
+import { Input } from "@/shared/components/ui/input";
+import { cn } from "@/shared/lib/utils";
+import { useToast } from "@/shared/hooks/use-toast";
 import { Users, TrendingUp, CheckCircle2, Clock } from "lucide-react";
 
 export default function Dashboard() {

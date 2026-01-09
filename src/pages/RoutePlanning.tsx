@@ -1,18 +1,18 @@
 import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useRoutes, useRouteWithStops, useCreateRoute, useDeleteRoute, useAddStop, useRemoveStop, useReorderStops, generateGoogleMapsUrl, RouteStopWithCustomer } from "@/hooks/useRoutes";
-import { useCustomers, Customer } from "@/hooks/useCustomers";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/features/auth/context/AuthContext";
+import { useRoutes, useRouteWithStops, useCreateRoute, useDeleteRoute, useAddStop, useRemoveStop, useReorderStops, generateGoogleMapsUrl, RouteStopWithCustomer } from "@/features/routes/hooks/useRoutes";
+import { useCustomers, Customer } from "@/features/customers/hooks/useCustomers";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
+import { Badge } from "@/shared/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/shared/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Plus, Trash2, Navigation, GripVertical, MapPin, Clock, Phone, ChevronLeft, Search, X } from "lucide-react";
 import { toast } from "sonner";
-import { OpeningHoursDisplay } from "@/components/OpeningHoursDisplay";
+import { OpeningHoursDisplay } from "@/features/customers/components/OpeningHoursDisplay";
 
 const WEEKDAYS = [
     { value: "mo", label: "Montag" },

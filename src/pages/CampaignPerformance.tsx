@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Skeleton } from "@/shared/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
+import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
 import { AlertCircle, CheckCircle, Users, XCircle, Clock, ChevronRight } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { useCampaignRejections } from "@/hooks/useCampaignRejections";
+import { Progress } from "@/shared/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
+import { Badge } from "@/shared/components/ui/badge";
+import { useCampaignRejections } from "@/features/campaigns/hooks/useCampaignRejections";
 
 export default function CampaignPerformance() {
     const [selectedCampaign, setSelectedCampaign] = useState<{ code: string; name: string; reason: string | null } | null>(null);

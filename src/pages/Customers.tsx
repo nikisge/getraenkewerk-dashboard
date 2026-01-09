@@ -1,21 +1,21 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useCustomers, useUpdateCustomer, CustomerFilters, Customer } from "@/hooks/useCustomers";
-import { useReps } from "@/hooks/useReps";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCustomers, useUpdateCustomer, CustomerFilters, Customer } from "@/features/customers/hooks/useCustomers";
+import { useReps } from "@/features/reps/hooks/useReps";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Input } from "@/shared/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
+import { Skeleton } from "@/shared/components/ui/skeleton";
+import { Badge } from "@/shared/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { Search, ChevronLeft, ChevronRight, Users, Filter, X, AlertCircle, Edit } from "lucide-react";
 import { toast } from "sonner";
-import { NewCustomerModal } from "@/components/NewCustomerModal";
-import { PurchaseIntervalSettings } from "@/components/PurchaseIntervalSettings";
-import { EditCustomerModal } from "@/components/EditCustomerModal";
-import { Button } from "@/components/ui/button";
-import { CustomerCard } from "@/components/CustomerCard";
+import { NewCustomerModal } from "@/features/customers/components/NewCustomerModal";
+import { PurchaseIntervalSettings } from "@/features/customers/components/PurchaseIntervalSettings";
+import { EditCustomerModal } from "@/features/customers/components/EditCustomerModal";
+import { Button } from "@/shared/components/ui/button";
+import { CustomerCard } from "@/features/customers/components/CustomerCard";
 
 const PAGE_SIZE = 50;
 

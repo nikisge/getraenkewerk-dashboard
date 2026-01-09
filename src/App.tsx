@@ -1,20 +1,20 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/shared/components/ui/toaster";
+import { Toaster as Sonner } from "@/shared/components/ui/sonner";
+import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
-import { Layout } from "./components/Layout";
-import ProtectedRoute from "./components/ProtectedRoute";
-import AdminRoute from "./components/AdminRoute";
-import Dashboard from "./pages/Dashboard";
-import Campaigns from "./pages/Campaigns";
-import Customers from "./pages/Customers";
-import TaskDistribution from "./pages/TaskDistribution";
-import CampaignPerformance from "./pages/CampaignPerformance";
-import RoutePlanning from "./pages/RoutePlanning";
-import Auth from "./pages/Auth";
-import NotFound from "./pages/NotFound";
+import { AuthProvider } from "@/features/auth/context/AuthContext";
+import { Layout } from "@/shared/components/Layout";
+import ProtectedRoute from "@/features/auth/components/ProtectedRoute";
+import AdminRoute from "@/features/auth/components/AdminRoute";
+import Dashboard from "@/pages/Dashboard";
+import Campaigns from "@/pages/Campaigns";
+import Customers from "@/pages/Customers";
+import TaskDistribution from "@/pages/TaskDistribution";
+import CampaignPerformance from "@/pages/CampaignPerformance";
+import RoutePlanning from "@/pages/RoutePlanning";
+import Auth from "@/pages/Auth";
+import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 

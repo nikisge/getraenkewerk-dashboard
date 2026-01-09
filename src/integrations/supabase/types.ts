@@ -473,6 +473,8 @@ export type Database = {
           rep_id: number
           telegram_chat_id: string
           telegram_username: string
+          password_hash: string | null
+          is_admin: boolean | null
         }
         Insert: {
           auth_token?: string | null
@@ -480,6 +482,8 @@ export type Database = {
           rep_id: number
           telegram_chat_id: string
           telegram_username: string
+          password_hash?: string | null
+          is_admin?: boolean | null
         }
         Update: {
           auth_token?: string | null
@@ -487,8 +491,42 @@ export type Database = {
           rep_id?: number
           telegram_chat_id?: string
           telegram_username?: string
+          password_hash?: string | null
+          is_admin?: boolean | null
         }
         Relationships: []
+      }
+      sessions: {
+        Row: {
+          id: string
+          rep_id: number
+          token: string
+          expires_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          rep_id: number
+          token: string
+          expires_at: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          rep_id?: number
+          token?: string
+          expires_at?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_rep_id_fkey"
+            columns: ["rep_id"]
+            isOneToOne: false
+            referencedRelation: "reps"
+            referencedColumns: ["rep_id"]
+          }
+        ]
       }
       tasks: {
         Row: {
@@ -640,6 +678,44 @@ export type Database = {
     }
     Functions: {
       analyze_and_update_customers: { Args: never; Returns: undefined }
+      authenticate_rep: {
+        Args: { p_password: string }
+        Returns: {
+          session_token: string
+          rep_id: number
+          rep_name: string
+          is_admin: boolean
+          telegram_chat_id: string
+          expires_at: string
+        }[]
+      }
+      validate_session: {
+        Args: { p_token: string }
+        Returns: {
+          rep_id: number
+          rep_name: string
+          is_admin: boolean
+          telegram_chat_id: string
+          auth_token: string | null
+          expires_at: string
+        }[]
+      }
+      invalidate_session: {
+        Args: { p_token: string }
+        Returns: undefined
+      }
+      hash_password: {
+        Args: { password: string }
+        Returns: string
+      }
+      change_password: {
+        Args: { p_session_token: string; p_new_password: string }
+        Returns: boolean
+      }
+      cleanup_expired_sessions: {
+        Args: never
+        Returns: number
+      }
       inject_campaign_tasks: {
         Args: never
         Returns: {

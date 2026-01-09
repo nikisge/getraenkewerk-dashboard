@@ -1,20 +1,20 @@
-import { useCampaigns, useDeleteCampaign, useUpdateCampaign } from "@/hooks/useCampaigns";
-import { useActions, useDeleteAction, useUpdateAction } from "@/hooks/useActions";
-import { NewCampaignModal } from "@/components/NewCampaignModal";
-import { NewActionModal } from "@/components/NewActionModal";
-import { EditCampaignModal } from "@/components/EditCampaignModal";
-import { EditActionModal } from "@/components/EditActionModal";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
+import { useCampaigns, useDeleteCampaign, useUpdateCampaign } from "@/features/campaigns/hooks/useCampaigns";
+import { useActions, useDeleteAction, useUpdateAction } from "@/features/actions/hooks/useActions";
+import { NewCampaignModal } from "@/features/campaigns/components/NewCampaignModal";
+import { NewActionModal } from "@/features/actions/components/NewActionModal";
+import { EditCampaignModal } from "@/features/campaigns/components/EditCampaignModal";
+import { EditActionModal } from "@/features/actions/components/EditActionModal";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
+import { Skeleton } from "@/shared/components/ui/skeleton";
+import { Badge } from "@/shared/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { Button } from "@/shared/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/shared/components/ui/alert-dialog";
 import { toast } from "sonner";
 
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/features/auth/context/AuthContext";
 import { useState } from "react";
 
 export default function Campaigns() {
