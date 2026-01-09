@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { TaskListView } from "@/features/tasks/components/TaskListView";
-import { Calendar as CalendarIcon, X, Megaphone, Phone, Mail, MapPin, Search, Clock, Pencil } from "lucide-react";
+import { Calendar as CalendarIcon, X, Megaphone, Phone, Mail, MapPin, Search, Clock, Pencil, ArrowUp, ArrowDown, ArrowUpDown, ChevronRight, Eye, CheckCircle, XCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Calendar } from "@/shared/components/ui/calendar";
 import { Button } from "@/shared/components/ui/button";
@@ -24,9 +24,10 @@ import { CampaignCard } from "@/features/campaigns/components/CampaignCard";
 import { OfferDialog } from "@/features/tasks/components/OfferDialog";
 import { DashboardTask } from "@/features/dashboard/hooks/useDashboardTasks";
 import { useSeenActions } from "@/features/actions/hooks/useSeenActions";
-import { useCustomers, Customer } from "@/features/customers/hooks/useCustomers";
+import { useCustomers, Customer, SortField, SortDirection } from "@/features/customers/hooks/useCustomers";
 import { EditCustomerModal } from "@/features/customers/components/EditCustomerModal";
 import { OpeningHoursDisplay } from "@/features/customers/components/OpeningHoursDisplay";
+import { useCampaignResults, CampaignResult } from "@/features/campaigns/hooks/useCampaignRejections";
 
 export function RepDashboard() {
   const { rep } = useAuth();
@@ -34,10 +35,40 @@ export function RepDashboard() {
   const { data: actions, isLoading: actionsLoading } = useActions();
   const { data: campaigns, isLoading: campaignsLoading } = useCampaigns();
   const [customerSearch, setCustomerSearch] = useState("");
+  const [customerPlzFilter, setCustomerPlzFilter] = useState("");
+  const [customerSortBy, setCustomerSortBy] = useState<SortField>("firma");
+  const [customerSortDir, setCustomerSortDir] = useState<SortDirection>("asc");
+
   const { data: customersData, isLoading: customersLoading } = useCustomers(
-    { repId: rep?.rep_id, searchTerm: customerSearch },
+    {
+      repId: rep?.rep_id,
+      searchTerm: customerSearch,
+      plzPrefix: customerPlzFilter || undefined,
+      sortBy: customerSortBy,
+      sortDir: customerSortDir,
+    },
     { page: 0, pageSize: 100 }
   );
+
+  // Handle column header click for sorting (customers)
+  const handleCustomerSort = (field: SortField) => {
+    if (customerSortBy === field) {
+      setCustomerSortDir(customerSortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setCustomerSortBy(field);
+      setCustomerSortDir(field === 'revenue_365d' ? 'desc' : 'asc');
+    }
+  };
+
+  // Render sort indicator for customers
+  const CustomerSortIndicator = ({ field }: { field: SortField }) => {
+    if (customerSortBy !== field) {
+      return <ArrowUpDown className="ml-1 h-4 w-4 text-muted-foreground/50" />;
+    }
+    return customerSortDir === 'asc'
+      ? <ArrowUp className="ml-1 h-4 w-4" />
+      : <ArrowDown className="ml-1 h-4 w-4" />;
+  };
   const updateTask = useUpdateTask();
   const updateChurnCallback = useUpdateChurnCallback();
   const [removedTaskIds, setRemovedTaskIds] = useState<string[]>([]);
@@ -49,6 +80,13 @@ export function RepDashboard() {
   const [activeTaskId, setActiveTaskId] = useState<string>("");
   const [editingOfferTask, setEditingOfferTask] = useState<DashboardTask | null>(null);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [selectedCampaignForResults, setSelectedCampaignForResults] = useState<{ code: string; name: string } | null>(null);
+
+  // Fetch campaign results for the selected campaign
+  const { data: campaignResults, isLoading: campaignResultsLoading } = useCampaignResults(
+    selectedCampaignForResults?.code || null,
+    rep?.rep_id
+  );
 
   // New actions notification
   const unseenActions = actions?.filter(a => isUnseen(a.id)) || [];
@@ -297,6 +335,151 @@ export function RepDashboard() {
         isRepView={true}
       />
 
+      {/* Campaign Results Dialog */}
+      <Dialog open={!!selectedCampaignForResults} onOpenChange={(open) => !open && setSelectedCampaignForResults(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Meine Ergebnisse: {selectedCampaignForResults?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Hier sehen Sie alle Ihre Kundenantworten für diese Kampagne.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-auto">
+            {campaignResultsLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map(i => <Skeleton key={i} className="h-12" />)}
+              </div>
+            ) : campaignResults && campaignResults.length > 0 ? (
+              <>
+                {/* Summary */}
+                <div className="flex gap-4 mb-4 p-3 bg-muted rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium">
+                      Gekauft: {campaignResults.filter(r => r.status === 'CLAIMED').length}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <XCircle className="h-4 w-4 text-red-600" />
+                    <span className="text-sm font-medium">
+                      Abgelehnt: {campaignResults.filter(r => r.status === 'DECLINED').length}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium">
+                      Angebote: {campaignResults.filter(r => r.status === 'OFFER').length}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Desktop Table */}
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Kunde</TableHead>
+                        <TableHead>Ort</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Grund</TableHead>
+                        <TableHead>Notiz</TableHead>
+                        <TableHead>Datum</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {campaignResults.map((result) => (
+                        <TableRow key={result.task_id}>
+                          <TableCell>
+                            <div className="font-medium">{result.firma}</div>
+                            <div className="text-xs text-muted-foreground">#{result.kunden_nummer}</div>
+                          </TableCell>
+                          <TableCell>{result.ort || "-"}</TableCell>
+                          <TableCell>
+                            {result.status === 'CLAIMED' && (
+                              <Badge className="bg-green-600">Gekauft</Badge>
+                            )}
+                            {result.status === 'DECLINED' && (
+                              <Badge variant="destructive">Abgelehnt</Badge>
+                            )}
+                            {result.status === 'OFFER' && (
+                              <Badge variant="secondary">Angebot</Badge>
+                            )}
+                            {!['CLAIMED', 'DECLINED', 'OFFER'].includes(result.status || '') && (
+                              <Badge variant="outline">{result.status || "-"}</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {result.failure_reason ? (
+                              <span className="text-sm text-red-600">{result.failure_reason}</span>
+                            ) : "-"}
+                          </TableCell>
+                          <TableCell className="max-w-xs">
+                            {result.notitz_rep ? (
+                              <span className="text-sm italic text-muted-foreground">
+                                "{result.notitz_rep}"
+                              </span>
+                            ) : "-"}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {result.last_change
+                              ? new Date(result.last_change).toLocaleDateString("de-DE")
+                              : "-"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3">
+                  {campaignResults.map((result) => (
+                    <Card key={result.task_id} className="p-3">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="font-medium text-sm">{result.firma}</p>
+                          <p className="text-xs text-muted-foreground">{result.ort || "-"}</p>
+                        </div>
+                        {result.status === 'CLAIMED' && (
+                          <Badge className="bg-green-600">Gekauft</Badge>
+                        )}
+                        {result.status === 'DECLINED' && (
+                          <Badge variant="destructive">Abgelehnt</Badge>
+                        )}
+                        {result.status === 'OFFER' && (
+                          <Badge variant="secondary">Angebot</Badge>
+                        )}
+                      </div>
+                      {result.failure_reason && (
+                        <p className="text-sm text-red-600">Grund: {result.failure_reason}</p>
+                      )}
+                      {result.notitz_rep && (
+                        <p className="text-sm italic text-muted-foreground mt-1">
+                          "{result.notitz_rep}"
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {result.last_change
+                          ? new Date(result.last_change).toLocaleDateString("de-DE")
+                          : "-"}
+                      </p>
+                    </Card>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                Noch keine Ergebnisse für diese Kampagne
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <h2 className="text-2xl font-bold">Dashboard</h2>
 
       {/* New Actions Banner */}
@@ -339,12 +522,12 @@ export function RepDashboard() {
       )}
 
       <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="hidden md:flex">
-          <TabsTrigger value="tasks">Meine Aufgaben</TabsTrigger>
-          <TabsTrigger value="offers">Meine Angebote</TabsTrigger>
-          <TabsTrigger value="actions">Aktionen</TabsTrigger>
-          <TabsTrigger value="campaigns">Kampagnen</TabsTrigger>
-          <TabsTrigger value="customers">Meine Kunden</TabsTrigger>
+        <TabsList className="flex w-full overflow-x-auto no-scrollbar">
+          <TabsTrigger value="tasks" className="flex-shrink-0">Meine Aufgaben</TabsTrigger>
+          <TabsTrigger value="offers" className="flex-shrink-0">Meine Angebote</TabsTrigger>
+          <TabsTrigger value="actions" className="flex-shrink-0">Aktionen</TabsTrigger>
+          <TabsTrigger value="campaigns" className="flex-shrink-0">Kampagnen</TabsTrigger>
+          <TabsTrigger value="customers" className="flex-shrink-0">Meine Kunden</TabsTrigger>
         </TabsList>
 
         <TabsContent value="tasks" className="mt-6">
@@ -547,26 +730,34 @@ export function RepDashboard() {
                       <TableHead>Name</TableHead>
                       <TableHead>Niedrigster VK</TableHead>
                       <TableHead>Aktiv von</TableHead>
-                      <TableHead>Absagegründe</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Ergebnisse</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {campaigns.map((campaign) => (
-                      <TableRow key={campaign.id}>
+                      <TableRow key={campaign.id} className="hover:bg-muted/50">
                         <TableCell className="font-mono">{campaign.campaign_code}</TableCell>
                         <TableCell>{campaign.name}</TableCell>
                         <TableCell>{campaign.Niedrigster_VK || "-"}</TableCell>
                         <TableCell>{new Date(campaign.active_from).toLocaleDateString("de-DE")}</TableCell>
                         <TableCell>
-                          {campaign.rejection_reasons && (campaign.rejection_reasons as string[]).length > 0
-                            ? (campaign.rejection_reasons as string[]).join(", ")
-                            : "-"}
-                        </TableCell>
-                        <TableCell>
                           <Badge variant={campaign.is_active ? "default" : "secondary"}>
                             {campaign.is_active ? "Aktiv" : "Inaktiv"}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedCampaignForResults({
+                              code: campaign.campaign_code,
+                              name: campaign.name
+                            })}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Ergebnisse
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -575,9 +766,43 @@ export function RepDashboard() {
               </div>
 
               {/* Mobile Card View */}
-              <div className="md:hidden">
+              <div className="md:hidden space-y-4">
                 {campaigns.map((campaign) => (
-                  <CampaignCard key={campaign.id} campaign={campaign} />
+                  <Card key={campaign.id}>
+                    <CardHeader className="pb-2">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-base">{campaign.name}</CardTitle>
+                          <p className="text-sm text-muted-foreground font-mono">{campaign.campaign_code}</p>
+                        </div>
+                        <Badge variant={campaign.is_active ? "default" : "secondary"}>
+                          {campaign.is_active ? "Aktiv" : "Inaktiv"}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {campaign.Niedrigster_VK && (
+                        <p className="text-sm">
+                          <span className="text-muted-foreground">Niedrigster VK:</span> {campaign.Niedrigster_VK}
+                        </p>
+                      )}
+                      <p className="text-sm">
+                        <span className="text-muted-foreground">Aktiv seit:</span> {new Date(campaign.active_from).toLocaleDateString("de-DE")}
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full mt-2"
+                        onClick={() => setSelectedCampaignForResults({
+                          code: campaign.campaign_code,
+                          name: campaign.name
+                        })}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Ergebnisse anzeigen
+                      </Button>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             </>
@@ -594,14 +819,22 @@ export function RepDashboard() {
             Hier sehen Sie alle Kunden, die Ihnen zugeteilt sind.
           </p>
 
-          {/* Search */}
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          {/* Search and Filter */}
+          <div className="flex flex-wrap gap-3 mb-4">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Kunde suchen..."
+                value={customerSearch}
+                onChange={(e) => setCustomerSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
             <Input
-              placeholder="Kunde suchen..."
-              value={customerSearch}
-              onChange={(e) => setCustomerSearch(e.target.value)}
-              className="pl-10"
+              placeholder="PLZ (z.B. 20)"
+              value={customerPlzFilter}
+              onChange={(e) => setCustomerPlzFilter(e.target.value)}
+              className="w-[100px]"
             />
           </div>
 
@@ -618,8 +851,33 @@ export function RepDashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Kunde</TableHead>
-                      <TableHead>Ort</TableHead>
+                      <TableHead
+                        className="cursor-pointer select-none hover:bg-muted/50"
+                        onClick={() => handleCustomerSort('firma')}
+                      >
+                        <span className="flex items-center">
+                          Kunde
+                          <CustomerSortIndicator field="firma" />
+                        </span>
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer select-none hover:bg-muted/50"
+                        onClick={() => handleCustomerSort('plz')}
+                      >
+                        <span className="flex items-center">
+                          PLZ
+                          <CustomerSortIndicator field="plz" />
+                        </span>
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer select-none hover:bg-muted/50"
+                        onClick={() => handleCustomerSort('ort')}
+                      >
+                        <span className="flex items-center">
+                          Ort
+                          <CustomerSortIndicator field="ort" />
+                        </span>
+                      </TableHead>
                       <TableHead>Kontakt</TableHead>
                       <TableHead>Öffnungszeiten</TableHead>
                       <TableHead></TableHead>
@@ -638,11 +896,11 @@ export function RepDashboard() {
                             <div className="font-medium">{customer.firma || "-"}</div>
                             <div className="text-sm text-muted-foreground">#{customer.kunden_nummer}</div>
                           </TableCell>
+                          <TableCell className="font-mono text-sm">
+                            {customer.plz || "-"}
+                          </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3 text-muted-foreground" />
-                              <span>{customer.plz} {customer.ort || "-"}</span>
-                            </div>
+                            {customer.ort || "-"}
                           </TableCell>
                           <TableCell>
                             <div className="space-y-1">

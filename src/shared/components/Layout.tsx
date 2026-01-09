@@ -5,6 +5,14 @@ import { useAuth } from "@/features/auth/context/AuthContext";
 import { Button } from "@/shared/components/ui/button";
 import { MobileBottomNav } from "@/shared/components/MobileBottomNav";
 import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -45,9 +53,21 @@ export function Layout({ children }: LayoutProps) {
           <h1 className="text-lg font-bold text-foreground">Dashboard</h1>
         </div>
         {rep && (
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="text-xs">{getInitials(rep.name)}</AvatarFallback>
-          </Avatar>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Avatar className="h-8 w-8 cursor-pointer">
+                <AvatarFallback className="text-xs">{getInitials(rep.name)}</AvatarFallback>
+              </Avatar>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>{rep.name}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={signOut} className="text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />
+                Abmelden
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </header>
 

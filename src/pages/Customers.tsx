@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useCustomers, useUpdateCustomer, CustomerFilters, Customer } from "@/features/customers/hooks/useCustomers";
+import { useCustomers, useUpdateCustomer, CustomerFilters, Customer, SortField, SortDirection } from "@/features/customers/hooks/useCustomers";
 import { useReps } from "@/features/reps/hooks/useReps";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Badge } from "@/shared/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
-import { Search, ChevronLeft, ChevronRight, Users, Filter, X, AlertCircle, Edit } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Users, Filter, X, AlertCircle, Edit, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { NewCustomerModal } from "@/features/customers/components/NewCustomerModal";
 import { PurchaseIntervalSettings } from "@/features/customers/components/PurchaseIntervalSettings";
@@ -34,6 +34,11 @@ export default function Customers() {
   const [repFilter, setRepFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [abcFilter, setAbcFilter] = useState<string>("all");
+  const [plzFilter, setPlzFilter] = useState<string>("");
+
+  // Sorting
+  const [sortBy, setSortBy] = useState<SortField>("firma");
+  const [sortDir, setSortDir] = useState<SortDirection>("asc");
 
   const { data: reps } = useReps();
 
@@ -43,6 +48,9 @@ export default function Customers() {
     repId: repFilter !== "all" ? parseInt(repFilter) : null,
     statusActive: statusFilter === "all" ? null : statusFilter === "active",
     abcClass: abcFilter !== "all" ? abcFilter : null,
+    plzPrefix: plzFilter || undefined,
+    sortBy,
+    sortDir,
   };
 
   // Filters for incomplete customers (auto_generated)
@@ -120,9 +128,35 @@ export default function Customers() {
     setRepFilter("all");
     setStatusFilter("all");
     setAbcFilter("all");
+    setPlzFilter("");
+    setSortBy("firma");
+    setSortDir("asc");
   };
 
-  const hasActiveFilters = searchTerm || repFilter !== "all" || statusFilter !== "all" || abcFilter !== "all";
+  const hasActiveFilters = searchTerm || repFilter !== "all" || statusFilter !== "all" || abcFilter !== "all" || plzFilter;
+
+  // Handle column header click for sorting
+  const handleSort = (field: SortField) => {
+    if (sortBy === field) {
+      // Toggle direction if same field
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New field, default to asc (or desc for revenue)
+      setSortBy(field);
+      setSortDir(field === 'revenue_365d' ? 'desc' : 'asc');
+    }
+    setPage(0); // Reset to first page
+  };
+
+  // Render sort indicator
+  const SortIndicator = ({ field }: { field: SortField }) => {
+    if (sortBy !== field) {
+      return <ArrowUpDown className="ml-1 h-4 w-4 text-muted-foreground/50" />;
+    }
+    return sortDir === 'asc'
+      ? <ArrowUp className="ml-1 h-4 w-4" />
+      : <ArrowDown className="ml-1 h-4 w-4" />;
+  };
 
   // Render the customer table (used for both tabs)
   // showIncompleteWarnings: show orange "fehlt" indicators and "Unvollständig" badge (for incomplete tab)
@@ -134,21 +168,54 @@ export default function Customers() {
           <TableHeader>
             <TableRow>
               <TableHead>Kd.-Nr.</TableHead>
-              <TableHead>Firma</TableHead>
+              <TableHead
+                className="cursor-pointer select-none hover:bg-muted/50"
+                onClick={() => handleSort('firma')}
+              >
+                <span className="flex items-center">
+                  Firma
+                  <SortIndicator field="firma" />
+                </span>
+              </TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Ort</TableHead>
+              <TableHead
+                className="cursor-pointer select-none hover:bg-muted/50"
+                onClick={() => handleSort('plz')}
+              >
+                <span className="flex items-center">
+                  PLZ
+                  <SortIndicator field="plz" />
+                </span>
+              </TableHead>
+              <TableHead
+                className="cursor-pointer select-none hover:bg-muted/50"
+                onClick={() => handleSort('ort')}
+              >
+                <span className="flex items-center">
+                  Ort
+                  <SortIndicator field="ort" />
+                </span>
+              </TableHead>
               <TableHead>Außendienstler</TableHead>
               {!showIncompleteWarnings && <TableHead>Kaufintervall</TableHead>}
               <TableHead>Status</TableHead>
               <TableHead>ABC</TableHead>
-              <TableHead>Umsatz 365d</TableHead>
+              <TableHead
+                className="cursor-pointer select-none hover:bg-muted/50"
+                onClick={() => handleSort('revenue_365d')}
+              >
+                <span className="flex items-center">
+                  Umsatz 365d
+                  <SortIndicator field="revenue_365d" />
+                </span>
+              </TableHead>
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {customerList.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
                   Keine Kunden gefunden
                 </TableCell>
               </TableRow>
@@ -165,6 +232,9 @@ export default function Customers() {
                   </TableCell>
                   <TableCell className="text-sm max-w-[180px] truncate" title={customer.email || ""}>
                     {customer.email || (showIncompleteWarnings ? <span className="text-orange-500">fehlt</span> : "-")}
+                  </TableCell>
+                  <TableCell className="font-mono text-sm">
+                    {customer.plz || (showIncompleteWarnings ? <span className="text-orange-500">fehlt</span> : "-")}
                   </TableCell>
                   <TableCell className="max-w-[120px] truncate">
                     {customer.ort || (showIncompleteWarnings ? <span className="text-orange-500">fehlt</span> : "-")}
@@ -442,6 +512,17 @@ export default function Customers() {
                   <Filter className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">Filter:</span>
                 </div>
+
+                {/* PLZ Filter */}
+                <Input
+                  placeholder="PLZ (z.B. 20)"
+                  value={plzFilter}
+                  onChange={(e) => {
+                    setPlzFilter(e.target.value);
+                    setPage(0);
+                  }}
+                  className="w-[100px]"
+                />
 
                 {/* Rep Filter */}
                 <Select value={repFilter} onValueChange={setRepFilter}>

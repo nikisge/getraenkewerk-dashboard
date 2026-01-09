@@ -27,7 +27,9 @@ export default function CampaignPerformance() {
         },
     });
 
-    const { data: rejections, isLoading: rejectionsLoading } = useCampaignRejections(selectedCampaign?.code || null);
+    const { data: rejections, isLoading: rejectionsLoading } = useCampaignRejections({
+        campaignCode: selectedCampaign?.code || null
+    });
 
     // Filter rejections by selected reason (or show all if no specific reason selected)
     const filteredRejections = selectedCampaign?.reason
