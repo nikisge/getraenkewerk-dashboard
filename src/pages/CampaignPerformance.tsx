@@ -44,8 +44,8 @@ export default function CampaignPerformance() {
         ? rejections?.filter(r => r.failure_reason === selectedCampaign.reason)
         : rejections;
 
-    // Filter for sales only (CLAIMED status)
-    const salesResults = allResults?.filter(r => r.status === 'CLAIMED') || [];
+    // Filter for sales only (CLAIMED or WON status)
+    const salesResults = allResults?.filter(r => r.status === 'CLAIMED' || r.status === 'WON') || [];
 
     if (isLoading) {
         return (

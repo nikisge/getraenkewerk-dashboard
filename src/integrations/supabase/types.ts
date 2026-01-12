@@ -62,6 +62,7 @@ export type Database = {
           exclude_existing_buyers: boolean | null
           id: number
           is_active: boolean | null
+          is_group_campaign: boolean | null
           name: string
           Niedrigster_VK: string | null
           rejection_reasons: Json | null
@@ -74,6 +75,7 @@ export type Database = {
           exclude_existing_buyers?: boolean | null
           id?: number
           is_active?: boolean | null
+          is_group_campaign?: boolean | null
           name: string
           Niedrigster_VK?: string | null
           rejection_reasons?: Json | null
@@ -86,6 +88,7 @@ export type Database = {
           exclude_existing_buyers?: boolean | null
           id?: number
           is_active?: boolean | null
+          is_group_campaign?: boolean | null
           name?: string
           Niedrigster_VK?: string | null
           rejection_reasons?: Json | null
@@ -410,6 +413,7 @@ export type Database = {
       fact_sales: {
         Row: {
           artikel: string
+          artikel_gruppe: string | null
           buisness_key: string
           datum: string
           gesellschaft: string | null
@@ -426,6 +430,7 @@ export type Database = {
         }
         Insert: {
           artikel: string
+          artikel_gruppe?: string | null
           buisness_key: string
           datum: string
           gesellschaft?: string | null
@@ -442,6 +447,7 @@ export type Database = {
         }
         Update: {
           artikel?: string
+          artikel_gruppe?: string | null
           buisness_key?: string
           datum?: string
           gesellschaft?: string | null

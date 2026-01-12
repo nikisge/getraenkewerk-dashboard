@@ -305,7 +305,10 @@ export default function RoutePlanning() {
                                         </div>
                                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                                             <MapPin className="h-3 w-3" />
-                                            <span className="truncate">{stop.customer?.plz} {stop.customer?.ort}</span>
+                                            <span className="truncate">
+                                                {stop.customer?.strasse && `${stop.customer.strasse}, `}
+                                                {stop.customer?.plz} {stop.customer?.ort}
+                                            </span>
                                         </div>
                                         {stop.customer?.telefon && (
                                             <div className="flex items-center gap-1 text-sm mt-1">
@@ -375,7 +378,10 @@ export default function RoutePlanning() {
                                                             <h4 className="font-medium">{customer.firma}</h4>
                                                             <span className="text-xs text-muted-foreground">#{customer.kunden_nummer}</span>
                                                         </div>
-                                                        <p className="text-sm text-muted-foreground">{customer.plz} {customer.ort}</p>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            {customer.strasse && `${customer.strasse}, `}
+                                                            {customer.plz} {customer.ort}
+                                                        </p>
                                                     </div>
                                                     {isInRoute ? (
                                                         <Badge variant="secondary">Bereits hinzugefügt</Badge>

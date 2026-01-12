@@ -360,7 +360,7 @@ export function RepDashboard() {
                   <div className="flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 text-green-600" />
                     <span className="text-sm font-medium">
-                      Gekauft: {campaignResults.filter(r => r.status === 'CLAIMED').length}
+                      Gekauft: {campaignResults.filter(r => r.status === 'CLAIMED' || r.status === 'WON').length}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -399,7 +399,7 @@ export function RepDashboard() {
                           </TableCell>
                           <TableCell>{result.ort || "-"}</TableCell>
                           <TableCell>
-                            {result.status === 'CLAIMED' && (
+                            {(result.status === 'CLAIMED' || result.status === 'WON') && (
                               <Badge className="bg-green-600">Gekauft</Badge>
                             )}
                             {result.status === 'DECLINED' && (
@@ -444,7 +444,7 @@ export function RepDashboard() {
                           <p className="font-medium text-sm">{result.firma}</p>
                           <p className="text-xs text-muted-foreground">{result.ort || "-"}</p>
                         </div>
-                        {result.status === 'CLAIMED' && (
+                        {(result.status === 'CLAIMED' || result.status === 'WON') && (
                           <Badge className="bg-green-600">Gekauft</Badge>
                         )}
                         {result.status === 'DECLINED' && (
@@ -860,6 +860,7 @@ export function RepDashboard() {
                           <CustomerSortIndicator field="firma" />
                         </span>
                       </TableHead>
+                      <TableHead>Straße</TableHead>
                       <TableHead
                         className="cursor-pointer select-none hover:bg-muted/50"
                         onClick={() => handleCustomerSort('plz')}
@@ -895,6 +896,9 @@ export function RepDashboard() {
                           <TableCell>
                             <div className="font-medium">{customer.firma || "-"}</div>
                             <div className="text-sm text-muted-foreground">#{customer.kunden_nummer}</div>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {customer.strasse || "-"}
                           </TableCell>
                           <TableCell className="font-mono text-sm">
                             {customer.plz || "-"}
@@ -958,7 +962,10 @@ export function RepDashboard() {
                       <CardContent className="space-y-2">
                         <div className="flex items-center gap-2 text-sm">
                           <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <span>{customer.plz} {customer.ort || "-"}</span>
+                          <span>
+                            {customer.strasse && `${customer.strasse}, `}
+                            {customer.plz} {customer.ort || "-"}
+                          </span>
                         </div>
                         {customer.telefon && (
                           <div className="flex items-center gap-2 text-sm">

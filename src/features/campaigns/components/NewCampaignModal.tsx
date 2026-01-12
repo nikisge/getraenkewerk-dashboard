@@ -16,6 +16,7 @@ export function NewCampaignModal({ children }: NewCampaignModalProps) {
   const [open, setOpen] = useState(false);
   const [rejectionReasons, setRejectionReasons] = useState<string[]>([]);
   const [currentReason, setCurrentReason] = useState("");
+  const [isGroupCampaign, setIsGroupCampaign] = useState(false);
   const createCampaign = useCreateCampaign();
 
   const addRejectionReason = () => {
@@ -41,12 +42,14 @@ export function NewCampaignModal({ children }: NewCampaignModalProps) {
       active_from: formData.get("active_from") as string,
       Niedrigster_VK: niedrigsterVK || null,
       rejection_reasons: rejectionReasons.length > 0 ? rejectionReasons : null,
+      is_group_campaign: isGroupCampaign,
     }, {
       onSuccess: () => {
         toast.success("Kampagne erfolgreich erstellt");
         setOpen(false);
         setRejectionReasons([]);
         setCurrentReason("");
+        setIsGroupCampaign(false);
       },
       onError: (error) => {
         toast.error("Fehler beim Erstellen: " + error.message);
@@ -69,8 +72,23 @@ export function NewCampaignModal({ children }: NewCampaignModalProps) {
           <DialogTitle>Neuer Artikel</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="is_group_campaign"
+              checked={isGroupCampaign}
+              onCheckedChange={(checked) => setIsGroupCampaign(checked === true)}
+            />
+            <Label htmlFor="is_group_campaign" className="text-sm font-normal cursor-pointer">
+              Gruppenkampagne (mehrere Artikel)
+            </Label>
+          </div>
+          {isGroupCampaign && (
+            <p className="text-xs text-muted-foreground -mt-2">
+              Bei Gruppenkampagnen wird geprüft, ob der Kunde irgendeinen Artikel dieser Gruppe gekauft hat.
+            </p>
+          )}
           <div>
-            <Label htmlFor="campaign_code">Artikelnummer</Label>
+            <Label htmlFor="campaign_code">{isGroupCampaign ? "Gruppennummer" : "Artikelnummer"}</Label>
             <Input id="campaign_code" name="campaign_code" required />
           </div>
           <div>
