@@ -44,7 +44,7 @@ export function useCustomers(
       // Single query with count - much faster!
       let query = supabase
         .from("dim_customers")
-        .select("kunden_nummer, firma, email, ort, plz, strasse, telefon, mobil, u_key, rep_id, purchase_interval, season_start, season_end, status_active, abc_class, revenue_365d, opening_hours_mon, opening_hours_tue, opening_hours_wed, opening_hours_thu, opening_hours_fri, opening_hours_sat, opening_hours_sun, opening_hours_notes", { count: "exact" })
+        .select("kunden_nummer, firma, email, ort, plz, strasse, telefon, mobil, u_key, rep_id, purchase_interval, season_start, season_end, status_active, abc_class, revenue_365d, latitude, longitude, opening_hours_mon, opening_hours_tue, opening_hours_wed, opening_hours_thu, opening_hours_fri, opening_hours_sat, opening_hours_sun, opening_hours_notes", { count: "exact" })
         .range(from, to);
 
       // Apply dynamic sorting

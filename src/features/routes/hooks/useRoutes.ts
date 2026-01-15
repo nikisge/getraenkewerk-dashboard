@@ -63,7 +63,7 @@ export function useRouteWithStops(routeId: string | undefined) {
             const customerNumbers = stops.map(s => s.kunden_nummer);
             const { data: customers, error: customersError } = await supabase
                 .from("dim_customers")
-                .select("kunden_nummer, firma, ort, plz, strasse, telefon, mobil, opening_hours_mon, opening_hours_tue, opening_hours_wed, opening_hours_thu, opening_hours_fri, opening_hours_sat, opening_hours_sun, opening_hours_notes")
+                .select("kunden_nummer, firma, ort, plz, strasse, telefon, mobil, latitude, longitude, abc_class, opening_hours_mon, opening_hours_tue, opening_hours_wed, opening_hours_thu, opening_hours_fri, opening_hours_sat, opening_hours_sun, opening_hours_notes")
                 .in("kunden_nummer", customerNumbers);
 
             if (customersError) throw customersError;

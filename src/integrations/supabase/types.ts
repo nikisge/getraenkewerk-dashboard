@@ -150,6 +150,8 @@ export type Database = {
           inactive_reason: string | null
           kunden_nummer: number
           last_order_date: string | null
+          latitude: number | null
+          longitude: number | null
           mobil: string | null
           opening_hours_fri: string | null
           opening_hours_mon: string | null
@@ -190,6 +192,8 @@ export type Database = {
           inactive_reason?: string | null
           kunden_nummer: number
           last_order_date?: string | null
+          latitude?: number | null
+          longitude?: number | null
           mobil?: string | null
           opening_hours_fri?: string | null
           opening_hours_mon?: string | null
@@ -230,6 +234,8 @@ export type Database = {
           inactive_reason?: string | null
           kunden_nummer?: number
           last_order_date?: string | null
+          latitude?: number | null
+          longitude?: number | null
           mobil?: string | null
           opening_hours_fri?: string | null
           opening_hours_mon?: string | null
@@ -475,6 +481,7 @@ export type Database = {
       reps: {
         Row: {
           auth_token: string | null
+          auth_user_id: string | null
           name: string
           rep_id: number
           telegram_chat_id: string
@@ -484,6 +491,7 @@ export type Database = {
         }
         Insert: {
           auth_token?: string | null
+          auth_user_id?: string | null
           name: string
           rep_id: number
           telegram_chat_id: string
@@ -493,6 +501,7 @@ export type Database = {
         }
         Update: {
           auth_token?: string | null
+          auth_user_id?: string | null
           name?: string
           rep_id?: number
           telegram_chat_id?: string

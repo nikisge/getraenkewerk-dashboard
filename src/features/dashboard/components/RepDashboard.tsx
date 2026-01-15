@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { TaskListView } from "@/features/tasks/components/TaskListView";
-import { Calendar as CalendarIcon, X, Megaphone, Phone, Mail, MapPin, Search, Clock, Pencil, ArrowUp, ArrowDown, ArrowUpDown, ChevronRight, Eye, CheckCircle, XCircle } from "lucide-react";
+import { Calendar as CalendarIcon, X, Megaphone, Phone, Mail, MapPin, Search, Clock, Pencil, ArrowUp, ArrowDown, ArrowUpDown, ChevronRight, ChevronDown, Eye, CheckCircle, XCircle, Bell, RotateCcw } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Calendar } from "@/shared/components/ui/calendar";
 import { Button } from "@/shared/components/ui/button";
@@ -31,7 +31,7 @@ import { useCampaignResults, CampaignResult } from "@/features/campaigns/hooks/u
 
 export function RepDashboard() {
   const { rep } = useAuth();
-  const { data: tasks, isLoading: tasksLoading } = useDashboardTasks(rep?.auth_token);
+  const { data: tasks, isLoading: tasksLoading } = useDashboardTasks(rep?.rep_id);
   const { data: actions, isLoading: actionsLoading } = useActions();
   const { data: campaigns, isLoading: campaignsLoading } = useCampaigns();
   const [customerSearch, setCustomerSearch] = useState("");
@@ -91,6 +91,18 @@ export function RepDashboard() {
   // New actions notification
   const unseenActions = actions?.filter(a => isUnseen(a.id)) || [];
   const [showNewActionsBanner, setShowNewActionsBanner] = useState(true);
+
+  // Reminder section collapsed state (persisted in localStorage)
+  const [isReminderCollapsed, setIsReminderCollapsed] = useState(() => {
+    const saved = localStorage.getItem('reminderSectionCollapsed');
+    return saved === 'true';
+  });
+
+  const toggleReminderCollapsed = () => {
+    const newValue = !isReminderCollapsed;
+    setIsReminderCollapsed(newValue);
+    localStorage.setItem('reminderSectionCollapsed', String(newValue));
+  };
 
   const dismissNewActionsBanner = () => {
     if (actions) {
@@ -251,6 +263,25 @@ export function RepDashboard() {
     }
   };
 
+  // Reactivate a DECLINED task back to PENDING
+  const handleReactivateTask = async (taskId: string) => {
+    try {
+      await updateTask.mutateAsync({
+        id: taskId,
+        updates: {
+          status: "PENDING",
+          verified_by_sales: false,
+          failure_reason: null,
+          notitz_rep: null,
+        },
+      });
+      toast.success("Aufgabe reaktiviert");
+    } catch (error) {
+      console.error("Error reactivating task:", error);
+      toast.error("Konnte nicht reaktiviert werden");
+    }
+  };
+
   // Filter out removed tasks
   const availableTasks = tasks?.filter(task => !removedTaskIds.includes(task.task_id || ""));
 
@@ -388,6 +419,7 @@ export function RepDashboard() {
                         <TableHead>Grund</TableHead>
                         <TableHead>Notiz</TableHead>
                         <TableHead>Datum</TableHead>
+                        <TableHead>Aktion</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -408,7 +440,7 @@ export function RepDashboard() {
                             {result.status === 'OFFER' && (
                               <Badge variant="secondary">Angebot</Badge>
                             )}
-                            {!['CLAIMED', 'DECLINED', 'OFFER'].includes(result.status || '') && (
+                            {!['CLAIMED', 'WON', 'DECLINED', 'OFFER'].includes(result.status || '') && (
                               <Badge variant="outline">{result.status || "-"}</Badge>
                             )}
                           </TableCell>
@@ -428,6 +460,19 @@ export function RepDashboard() {
                             {result.last_change
                               ? new Date(result.last_change).toLocaleDateString("de-DE")
                               : "-"}
+                          </TableCell>
+                          <TableCell>
+                            {(result.status === 'DECLINED' || result.status === 'Lie') && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleReactivateTask(result.task_id)}
+                                className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                              >
+                                <RotateCcw className="h-3 w-3 mr-1" />
+                                Reaktivieren
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -462,11 +507,24 @@ export function RepDashboard() {
                           "{result.notitz_rep}"
                         </p>
                       )}
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {result.last_change
-                          ? new Date(result.last_change).toLocaleDateString("de-DE")
-                          : "-"}
-                      </p>
+                      <div className="flex justify-between items-center mt-2">
+                        <p className="text-xs text-muted-foreground">
+                          {result.last_change
+                            ? new Date(result.last_change).toLocaleDateString("de-DE")
+                            : "-"}
+                        </p>
+                        {(result.status === 'DECLINED' || result.status === 'Lie') && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleReactivateTask(result.task_id)}
+                            className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                          >
+                            <RotateCcw className="h-3 w-3 mr-1" />
+                            Reaktivieren
+                          </Button>
+                        )}
+                      </div>
                     </Card>
                   ))}
                 </div>
@@ -481,6 +539,76 @@ export function RepDashboard() {
       </Dialog>
 
       <h2 className="text-2xl font-bold">Dashboard</h2>
+
+      {/* Prominente Erinnerungs-Sektion - immer sichtbar wenn Erinnerungen fällig */}
+      {reminderTasks && reminderTasks.length > 0 && (
+        <Card className={`border-orange-300 shadow-md transition-all ${isReminderCollapsed ? 'bg-orange-100' : 'bg-gradient-to-r from-orange-50 to-amber-50'}`}>
+          <CardHeader className={isReminderCollapsed ? "pb-0" : "pb-2"}>
+            <div
+              className="flex items-center justify-between cursor-pointer"
+              onClick={toggleReminderCollapsed}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`rounded-full p-2 ${isReminderCollapsed ? 'bg-orange-400' : 'bg-orange-500'}`}>
+                  <Bell className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className={`text-orange-800 ${isReminderCollapsed ? 'text-base' : 'text-lg'}`}>
+                    {reminderTasks.length === 1
+                      ? "1 Angebot-Erinnerung fällig!"
+                      : `${reminderTasks.length} Angebot-Erinnerungen fällig!`}
+                  </CardTitle>
+                  {!isReminderCollapsed && (
+                    <p className="text-sm text-orange-600">
+                      Diese Kunden warten auf Ihren Rückruf
+                    </p>
+                  )}
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" className="text-orange-600 hover:text-orange-800 hover:bg-orange-200">
+                {isReminderCollapsed ? (
+                  <ChevronRight className="h-5 w-5" />
+                ) : (
+                  <ChevronDown className="h-5 w-5" />
+                )}
+              </Button>
+            </div>
+          </CardHeader>
+          {!isReminderCollapsed && (
+            <CardContent className="pt-2">
+              <div className="space-y-2">
+                {reminderTasks.slice(0, 3).map(task => (
+                  <div
+                    key={task.task_id}
+                    className="flex items-center justify-between bg-white/70 rounded-lg p-3 cursor-pointer hover:bg-white transition-colors"
+                    onClick={() => setEditingOfferTask(task)}
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{task.firma}</p>
+                      <p className="text-xs text-muted-foreground">{task.title}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-orange-700 border-orange-300 text-xs">
+                        {task.reminder_date && new Date(task.reminder_date).toLocaleDateString('de-DE')}
+                      </Badge>
+                      <ChevronRight className="h-4 w-4 text-orange-500" />
+                    </div>
+                  </div>
+                ))}
+                {reminderTasks.length > 3 && (
+                  <Button
+                    variant="ghost"
+                    className="w-full text-orange-700 hover:text-orange-800 hover:bg-orange-100"
+                    onClick={() => handleTabChange("offers")}
+                  >
+                    Alle {reminderTasks.length} Erinnerungen anzeigen
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      )}
 
       {/* New Actions Banner */}
       {showNewActionsBanner && unseenActions.length > 0 && (

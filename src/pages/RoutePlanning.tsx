@@ -10,9 +10,10 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/shared/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { Plus, Trash2, Navigation, GripVertical, MapPin, Clock, Phone, ChevronLeft, Search, X } from "lucide-react";
+import { Plus, Trash2, Navigation, GripVertical, MapPin, Clock, Phone, ChevronLeft, Search, X, Map } from "lucide-react";
 import { toast } from "sonner";
 import { OpeningHoursDisplay } from "@/features/customers/components/OpeningHoursDisplay";
+import { RouteMapView } from "@/features/routes/components/RouteMapView";
 
 const WEEKDAYS = [
     { value: "mo", label: "Montag" },
@@ -28,6 +29,7 @@ export default function RoutePlanning() {
     const { rep } = useAuth();
     const { data: routes, isLoading: routesLoading } = useRoutes(rep?.rep_id);
     const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+    const [isMapView, setIsMapView] = useState(false);
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [newRouteName, setNewRouteName] = useState("");
     const [newRouteWeekday, setNewRouteWeekday] = useState<string>("");
@@ -59,6 +61,7 @@ export default function RoutePlanning() {
             setNewRouteWeekday("");
             setIsCreateDialogOpen(false);
             setSelectedRouteId(route.id);
+            setIsMapView(true); // Direkt zur Map-Ansicht wechseln
             toast.success("Route erstellt");
         } catch {
             toast.error("Fehler beim Erstellen");
@@ -141,6 +144,19 @@ export default function RoutePlanning() {
         }
     };
 
+    // Map View (new interactive view)
+    if (selectedRouteId && isMapView) {
+        return (
+            <RouteMapView
+                routeId={selectedRouteId}
+                onBack={() => {
+                    setIsMapView(false);
+                    setSelectedRouteId(null);
+                }}
+            />
+        );
+    }
+
     // Route list view
     if (!selectedRouteId) {
         return (
@@ -166,12 +182,15 @@ export default function RoutePlanning() {
                             <Card
                                 key={route.id}
                                 className="cursor-pointer hover:bg-muted/50 transition-colors"
-                                onClick={() => setSelectedRouteId(route.id)}
+                                onClick={() => {
+                                    setSelectedRouteId(route.id);
+                                    setIsMapView(true);
+                                }}
                             >
                                 <CardContent className="p-4 flex justify-between items-center">
                                     <div className="flex items-center gap-3">
                                         <div className="bg-primary/10 p-2 rounded-lg">
-                                            <Navigation className="h-5 w-5 text-primary" />
+                                            <Map className="h-5 w-5 text-primary" />
                                         </div>
                                         <div>
                                             <h3 className="font-semibold">{route.name}</h3>
@@ -182,20 +201,22 @@ export default function RoutePlanning() {
                                             )}
                                         </div>
                                     </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={(e) => { e.stopPropagation(); handleDeleteRoute(route.id); }}
-                                    >
-                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
+                                    <div className="flex items-center gap-1">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={(e) => { e.stopPropagation(); handleDeleteRoute(route.id); }}
+                                        >
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </div>
                                 </CardContent>
                             </Card>
                         ))}
                     </div>
                 ) : (
                     <Card className="p-8 text-center">
-                        <Navigation className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                        <Map className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                         <h3 className="font-semibold mb-2">Keine Routen vorhanden</h3>
                         <p className="text-muted-foreground mb-4">Erstelle deine erste Route für Kundenbesuche</p>
                         <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
@@ -262,10 +283,16 @@ export default function RoutePlanning() {
                         </Badge>
                     )}
                 </div>
-                <Button onClick={openGoogleMaps} disabled={!routeWithStops?.stops.length} className="gap-2">
-                    <Navigation className="h-4 w-4" />
-                    Maps öffnen
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => setIsMapView(true)} className="gap-2">
+                        <Map className="h-4 w-4" />
+                        Karte
+                    </Button>
+                    <Button onClick={openGoogleMaps} disabled={!routeWithStops?.stops.length} className="gap-2">
+                        <Navigation className="h-4 w-4" />
+                        Navigation
+                    </Button>
+                </div>
             </div>
 
             {routeLoading ? (

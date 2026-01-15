@@ -2,30 +2,19 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 
-// Session-Daten von der authenticate_rep Funktion
-interface AuthSession {
-  sessionToken: string;
-  repId: number;
-  repName: string;
-  isAdmin: boolean;
-  telegramChatId: string;
-  authToken: string | null; // Legacy, für Kompatibilität mit alten Hooks
-  expiresAt: string;
-}
+const SESSION_KEY = 'crm_session_token';
 
-// Kompatibilitäts-Interface (wie vorher)
 export interface AuthRep {
   rep_id: number;
   name: string;
   auth_token: string | null;
   telegram_chat_id: string;
-  telegram_username: string;
+  telegram_username?: string;
   role: 'admin' | 'rep';
 }
 
 interface AuthContextType {
   rep: AuthRep | null;
-  session: AuthSession | null;
   signIn: (password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   loading: boolean;
@@ -33,106 +22,79 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const SESSION_TOKEN_KEY = 'session_token';
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<AuthSession | null>(null);
+  const [rep, setRep] = useState<AuthRep | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Kompatibilitäts-Property: rep wird aus session abgeleitet
-  const rep: AuthRep | null = session ? {
-    rep_id: session.repId,
-    name: session.repName,
-    auth_token: session.authToken,
-    telegram_chat_id: session.telegramChatId,
-    telegram_username: '', // Nicht in Session gespeichert, aber selten gebraucht
-    role: session.isAdmin ? 'admin' : 'rep',
-  } : null;
-
+  // Session beim Start validieren
   useEffect(() => {
-    // Session aus localStorage validieren
-    const storedToken = localStorage.getItem(SESSION_TOKEN_KEY);
-    if (storedToken) {
-      validateSession(storedToken);
-    } else {
-      // Legacy-Migration: Alte authenticated_rep Daten migrieren
-      const legacyRep = localStorage.getItem('authenticated_rep');
-      if (legacyRep) {
-        // Alte Daten löschen, User muss sich neu einloggen
-        localStorage.removeItem('authenticated_rep');
-      }
-      setLoading(false);
-    }
-  }, []);
+    const validateExistingSession = async () => {
+      const token = localStorage.getItem(SESSION_KEY);
 
-  const validateSession = async (token: string) => {
-    try {
-      const { data, error } = await supabase
-        .rpc('validate_session', { p_token: token });
-
-      if (error || !data || data.length === 0) {
-        // Session ungültig oder abgelaufen
-        localStorage.removeItem(SESSION_TOKEN_KEY);
+      if (!token) {
         setLoading(false);
         return;
       }
 
-      const sessionData = data[0];
-      setSession({
-        sessionToken: token,
-        repId: sessionData.rep_id,
-        repName: sessionData.rep_name,
-        isAdmin: sessionData.is_admin,
-        telegramChatId: sessionData.telegram_chat_id,
-        authToken: sessionData.auth_token,
-        expiresAt: sessionData.expires_at,
-      });
-    } catch (err) {
-      console.error('Session validation failed:', err);
-      localStorage.removeItem(SESSION_TOKEN_KEY);
-    }
-    setLoading(false);
-  };
+      try {
+        // Prüfe ob auth_token noch gültig ist
+        const { data, error } = await supabase
+          .from('reps')
+          .select('rep_id, name, telegram_chat_id, telegram_username, is_admin, auth_token')
+          .eq('auth_token', token)
+          .single();
 
-  const signIn = async (password: string) => {
+        if (error || !data) {
+          localStorage.removeItem(SESSION_KEY);
+          setRep(null);
+        } else {
+          setRep({
+            rep_id: data.rep_id,
+            name: data.name,
+            auth_token: data.auth_token,
+            telegram_chat_id: data.telegram_chat_id,
+            telegram_username: data.telegram_username,
+            role: data.is_admin ? 'admin' : 'rep',
+          });
+        }
+      } catch (err) {
+        console.error('Session validation error:', err);
+        localStorage.removeItem(SESSION_KEY);
+        setRep(null);
+      }
+
+      setLoading(false);
+    };
+
+    validateExistingSession();
+  }, []);
+
+  const signIn = async (authToken: string) => {
     try {
+      // Direkt mit auth_token aus reps Tabelle einloggen
       const { data, error } = await supabase
-        .rpc('authenticate_rep', { p_password: password });
+        .from('reps')
+        .select('rep_id, name, telegram_chat_id, telegram_username, is_admin, auth_token')
+        .eq('auth_token', authToken)
+        .single();
 
-      if (error) {
+      if (error || !data) {
         console.error('Auth error:', error);
-        return { error: { message: 'Fehler beim Login' } };
+        return { error: { message: 'Ungültiger Token' } };
       }
 
-      if (!data || data.length === 0) {
-        return { error: { message: 'Falsches Passwort' } };
-      }
+      // Auth token als session token verwenden
+      localStorage.setItem(SESSION_KEY, authToken);
 
-      const authData = data[0];
-      const newSession: AuthSession = {
-        sessionToken: authData.session_token,
-        repId: authData.rep_id,
-        repName: authData.rep_name,
-        isAdmin: authData.is_admin,
-        telegramChatId: authData.telegram_chat_id,
-        authToken: null, // Wird bei validate_session nachgeladen
-        expiresAt: authData.expires_at,
-      };
-
-      setSession(newSession);
-      localStorage.setItem(SESSION_TOKEN_KEY, authData.session_token);
-
-      // Auth-Token nachladen für Kompatibilität
-      const { data: validatedData } = await supabase
-        .rpc('validate_session', { p_token: authData.session_token });
-
-      if (validatedData && validatedData.length > 0) {
-        setSession(prev => prev ? {
-          ...prev,
-          authToken: validatedData[0].auth_token,
-        } : null);
-      }
+      setRep({
+        rep_id: data.rep_id,
+        name: data.name,
+        auth_token: data.auth_token,
+        telegram_chat_id: data.telegram_chat_id,
+        telegram_username: data.telegram_username,
+        role: data.is_admin ? 'admin' : 'rep',
+      });
 
       navigate('/');
       return { error: null };
@@ -143,21 +105,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    if (session) {
-      // Session in Datenbank invalidieren
-      try {
-        await supabase.rpc('invalidate_session', { p_token: session.sessionToken });
-      } catch (err) {
-        console.error('Logout error:', err);
-      }
-    }
-    setSession(null);
-    localStorage.removeItem(SESSION_TOKEN_KEY);
+    localStorage.removeItem(SESSION_KEY);
+    setRep(null);
     navigate('/auth');
   };
 
   return (
-    <AuthContext.Provider value={{ rep, session, signIn, signOut, loading }}>
+    <AuthContext.Provider value={{ rep, signIn, signOut, loading }}>
       {children}
     </AuthContext.Provider>
   );

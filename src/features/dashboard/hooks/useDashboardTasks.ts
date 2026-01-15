@@ -4,21 +4,21 @@ import { Tables } from "@/integrations/supabase/types";
 
 export type DashboardTask = Tables<"dashboard_tasks">;
 
-export function useDashboardTasks(authToken: string | null | undefined) {
+export function useDashboardTasks(repId: number | null | undefined) {
   return useQuery({
-    queryKey: ["dashboard_tasks", authToken],
+    queryKey: ["dashboard_tasks", repId],
     queryFn: async () => {
-      if (!authToken) return [];
+      if (!repId) return [];
 
       const { data, error } = await supabase
         .from("dashboard_tasks")
         .select("*")
-        .eq("auth_token", authToken)
+        .eq("rep_id", repId)
         .order("due_date", { ascending: true });
 
       if (error) throw error;
       return data as DashboardTask[];
     },
-    enabled: !!authToken,
+    enabled: !!repId,
   });
 }

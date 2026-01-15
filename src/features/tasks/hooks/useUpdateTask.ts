@@ -31,6 +31,8 @@ export function useUpdateTask() {
       queryClient.invalidateQueries({ queryKey: ["task-stats"] });
       queryClient.invalidateQueries({ queryKey: ["rep-performance"] });
       queryClient.invalidateQueries({ queryKey: ["rep-completed-activities"] });
+      queryClient.invalidateQueries({ queryKey: ["campaign_results"] });
+      queryClient.invalidateQueries({ queryKey: ["campaign_rejections"] });
     },
   });
 }
