@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { TaskListView } from "@/features/tasks/components/TaskListView";
-import { Calendar as CalendarIcon, X, Megaphone, Phone, Mail, MapPin, Search, Clock, Pencil, ArrowUp, ArrowDown, ArrowUpDown, ChevronRight, ChevronDown, Eye, CheckCircle, XCircle, Bell, RotateCcw } from "lucide-react";
+import { Calendar as CalendarIcon, X, Megaphone, Phone, Mail, MapPin, Search, Clock, Pencil, ArrowUp, ArrowDown, ArrowUpDown, ChevronRight, ChevronDown, Eye, CheckCircle, XCircle, Bell, RotateCcw, User } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Calendar } from "@/shared/components/ui/calendar";
 import { Button } from "@/shared/components/ui/button";
@@ -1036,6 +1036,12 @@ export function RepDashboard() {
                           </TableCell>
                           <TableCell>
                             <div className="space-y-1">
+                              {customer.contact && (
+                                <div className="flex items-center gap-1 text-sm font-medium">
+                                  <User className="h-3 w-3" />
+                                  <span>{customer.contact}</span>
+                                </div>
+                              )}
                               {customer.telefon && (
                                 <div className="flex items-center gap-1 text-sm">
                                   <Phone className="h-3 w-3" />
@@ -1095,6 +1101,12 @@ export function RepDashboard() {
                             {customer.plz} {customer.ort || "-"}
                           </span>
                         </div>
+                        {customer.contact && (
+                          <div className="flex items-center gap-2 text-sm font-medium">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span>{customer.contact}</span>
+                          </div>
+                        )}
                         {customer.telefon && (
                           <div className="flex items-center gap-2 text-sm">
                             <Phone className="h-4 w-4 text-muted-foreground" />

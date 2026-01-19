@@ -23,6 +23,7 @@ export function NewCustomerModal() {
       kunden_nummer: parseInt(formData.get("kunden_nummer") as string),
       firma: formData.get("firma") as string,
       email: formData.get("email") as string || null,
+      contact: formData.get("contact") as string || null,
       strasse: formData.get("strasse") as string || null,
       plz: formData.get("plz") as string || null,
       ort: formData.get("ort") as string || null,
@@ -62,6 +63,10 @@ export function NewCustomerModal() {
           <div>
             <Label htmlFor="firma">Firma</Label>
             <Input id="firma" name="firma" required />
+          </div>
+          <div>
+            <Label htmlFor="contact">Ansprechpartner</Label>
+            <Input id="contact" name="contact" placeholder="Max Mustermann" />
           </div>
           <div>
             <Label htmlFor="email">E-Mail</Label>

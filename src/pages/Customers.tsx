@@ -227,8 +227,13 @@ export default function Customers() {
                   onClick={() => setEditingCustomer(customer)}
                 >
                   <TableCell className="font-mono text-sm">{customer.kunden_nummer}</TableCell>
-                  <TableCell className="font-medium max-w-[200px] truncate" title={customer.firma || ""}>
-                    {customer.firma}
+                  <TableCell className="max-w-[200px]">
+                    <div className="font-medium truncate" title={customer.firma || ""}>{customer.firma}</div>
+                    {customer.contact && (
+                      <div className="text-xs text-muted-foreground truncate" title={customer.contact}>
+                        {customer.contact}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="text-sm max-w-[180px] truncate" title={customer.email || ""}>
                     {customer.email || (showIncompleteWarnings ? <span className="text-orange-500">fehlt</span> : "-")}

@@ -41,6 +41,7 @@ export function EditCustomerModal({ customer, isOpen, onClose, onDismiss, isRepV
         strasse: "",
         telefon: "",
         mobil: "",
+        contact: "",
         rep_id: "",
         opening_hours_mon: "",
         opening_hours_tue: "",
@@ -61,6 +62,7 @@ export function EditCustomerModal({ customer, isOpen, onClose, onDismiss, isRepV
                 strasse: customer.strasse || "",
                 telefon: customer.telefon || "",
                 mobil: customer.mobil || "",
+                contact: customer.contact || "",
                 rep_id: customer.rep_id?.toString() || "",
                 opening_hours_mon: customer.opening_hours_mon || "",
                 opening_hours_tue: customer.opening_hours_tue || "",
@@ -121,6 +123,7 @@ export function EditCustomerModal({ customer, isOpen, onClose, onDismiss, isRepV
                     strasse: formData.strasse || null,
                     telefon: formData.telefon || null,
                     mobil: formData.mobil || null,
+                    contact: formData.contact || null,
                     ...(isRepView ? {} : { rep_id: formData.rep_id ? parseInt(formData.rep_id) : null }),
                     opening_hours_mon: formData.opening_hours_mon || null,
                     opening_hours_tue: formData.opening_hours_tue || null,
@@ -197,6 +200,16 @@ export function EditCustomerModal({ customer, isOpen, onClose, onDismiss, isRepV
 
                 <div className="grid gap-4 py-4">
                     {/* Contact Info */}
+                    <div className="grid gap-2">
+                        <Label htmlFor="contact">Ansprechpartner</Label>
+                        <Input
+                            id="contact"
+                            placeholder="Max Mustermann"
+                            value={formData.contact}
+                            onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
+                        />
+                    </div>
+
                     <div className="grid gap-2">
                         <Label htmlFor="email">E-Mail</Label>
                         <Input

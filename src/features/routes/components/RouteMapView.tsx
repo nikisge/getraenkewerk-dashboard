@@ -24,6 +24,7 @@ import {
   Users,
   Map,
   List,
+  User,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { OpeningHoursDisplay } from '@/features/customers/components/OpeningHoursDisplay';
@@ -359,6 +360,12 @@ function ListContent({
                         #{stop.customer.kunden_nummer}
                       </span>
                     </div>
+                    {stop.customer.contact && (
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <User className="h-3 w-3" />
+                        {stop.customer.contact}
+                      </div>
+                    )}
                     {stop.customer.telefon && (
                       <a
                         href={`tel:${stop.customer.telefon}`}

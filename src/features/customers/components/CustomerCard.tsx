@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
-import { Building2, MapPin, Mail, Euro, User, Calendar, Power } from "lucide-react";
+import { Building2, MapPin, Mail, Euro, User, Calendar, Power, UserCircle } from "lucide-react";
 import { PurchaseIntervalSettings } from "@/features/customers/components/PurchaseIntervalSettings";
 import { Customer } from "@/features/customers/hooks/useCustomers";
 import { Rep } from "@/features/reps/hooks/useReps";
@@ -43,6 +43,12 @@ export function CustomerCard({
             <CardContent className="space-y-4">
                 {/* Contact Info */}
                 <div className="space-y-2 text-sm">
+                    {customer.contact && (
+                        <div className="flex items-center gap-2 font-medium">
+                            <UserCircle className="h-4 w-4 text-muted-foreground" />
+                            <span>{customer.contact}</span>
+                        </div>
+                    )}
                     <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-muted-foreground" />
                         <span className="truncate">{customer.email || "-"}</span>

@@ -141,6 +141,7 @@ export type Database = {
           abc_class: string | null
           activity_state: string | null
           churn_alert_pending: boolean | null
+          contact: string | null
           created_at: string | null
           days_since_last_order: number | null
           email: string | null
@@ -183,6 +184,7 @@ export type Database = {
           abc_class?: string | null
           activity_state?: string | null
           churn_alert_pending?: boolean | null
+          contact?: string | null
           created_at?: string | null
           days_since_last_order?: number | null
           email?: string | null
@@ -225,6 +227,7 @@ export type Database = {
           abc_class?: string | null
           activity_state?: string | null
           churn_alert_pending?: boolean | null
+          contact?: string | null
           created_at?: string | null
           days_since_last_order?: number | null
           email?: string | null
