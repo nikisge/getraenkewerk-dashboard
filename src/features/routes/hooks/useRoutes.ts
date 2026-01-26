@@ -105,15 +105,25 @@ export function useCreateRoute() {
     });
 }
 
-// Update route name/weekday
+// Update route (name, weekday, start_time)
 export function useUpdateRoute() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ id, name, weekday }: { id: string; name?: string; weekday?: string | null }) => {
+        mutationFn: async ({ id, name, weekday, start_time }: {
+            id: string;
+            name?: string;
+            weekday?: string | null;
+            start_time?: string | null;
+        }) => {
+            const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
+            if (name !== undefined) updateData.name = name;
+            if (weekday !== undefined) updateData.weekday = weekday;
+            if (start_time !== undefined) updateData.start_time = start_time;
+
             const { data, error } = await supabase
                 .from("routes")
-                .update({ name, weekday, updated_at: new Date().toISOString() })
+                .update(updateData)
                 .eq("id", id)
                 .select()
                 .single();

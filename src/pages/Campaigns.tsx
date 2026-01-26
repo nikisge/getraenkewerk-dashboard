@@ -47,7 +47,7 @@ export default function Campaigns() {
   };
 
   return (
-    <div className="space-y-4 md:space-y-6 p-4 md:p-0">
+    <div className="p-4 md:p-8 space-y-4 md:space-y-6">
       <h1 className="text-2xl md:text-3xl font-bold">Kampagnen</h1>
 
       <EditCampaignModal

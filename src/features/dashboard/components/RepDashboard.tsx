@@ -317,7 +317,7 @@ export function RepDashboard() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="p-4 md:p-8 space-y-8">
       {/* Reminder Dialog */}
       <Dialog open={isReminderDialogOpen} onOpenChange={setIsReminderDialogOpen}>
         <DialogContent>

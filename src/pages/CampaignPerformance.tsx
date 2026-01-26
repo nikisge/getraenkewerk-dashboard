@@ -49,7 +49,7 @@ export default function CampaignPerformance() {
 
     if (isLoading) {
         return (
-            <div className="space-y-6">
+            <div className="p-4 md:p-8 space-y-6">
                 <h1 className="text-3xl font-bold">Kampagnen Performance</h1>
                 <div className="grid gap-4">
                     <Skeleton className="h-[200px]" />
@@ -72,7 +72,7 @@ export default function CampaignPerformance() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="p-4 md:p-8 space-y-6">
             <h1 className="text-3xl font-bold">Kampagnen Performance</h1>
 
             {campaigns?.map((campaign) => {

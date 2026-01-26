@@ -115,7 +115,7 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-auto pb-16 md:pb-0">
-        <div className="container mx-auto p-4 md:p-8 w-full">{children}</div>
+        {children}
       </main>
 
       {/* Mobile Bottom Navigation */}

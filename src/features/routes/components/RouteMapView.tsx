@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { useRouteWithStops, useAddStop, useRemoveStop, useReorderStops, RouteStopWithCustomer } from '../hooks/useRoutes';
+import { useRouteWithStops, useAddStop, useRemoveStop, useReorderStops, useUpdateRoute, RouteStopWithCustomer } from '../hooks/useRoutes';
 import { useCustomers, Customer } from '@/features/customers/hooks/useCustomers';
 import { GoogleMapsProvider } from './GoogleMapsProvider';
-import { RouteMap } from './RouteMap';
+import { RouteMap, LegDuration } from './RouteMap';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
@@ -25,6 +25,7 @@ import {
   Map,
   List,
   User,
+  Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { OpeningHoursDisplay } from '@/features/customers/components/OpeningHoursDisplay';
@@ -59,12 +60,16 @@ function SortableStopItem({
   onRemove,
   isSelected,
   onSelect,
+  arrivalTime,
+  driveTime,
 }: {
   stop: RouteStopWithCustomer;
   index: number;
   onRemove: () => void;
   isSelected: boolean;
   onSelect: () => void;
+  arrivalTime?: string;
+  driveTime?: string;
 }) {
   const {
     attributes,
@@ -104,6 +109,9 @@ function SortableStopItem({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-medium truncate text-sm">{stop.customer?.firma || 'Unbekannt'}</span>
+            {arrivalTime && (
+              <span className="text-xs font-medium text-primary shrink-0">~{arrivalTime}</span>
+            )}
           </div>
           <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
             <MapPin className="h-3 w-3 shrink-0" />
@@ -112,6 +120,12 @@ function SortableStopItem({
               {stop.customer?.plz} {stop.customer?.ort}
             </span>
           </div>
+          {driveTime && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+              <Clock className="h-3 w-3 shrink-0" />
+              <span>{driveTime} Fahrt</span>
+            </div>
+          )}
         </div>
 
         <Button
@@ -209,6 +223,7 @@ function ListContent({
   handleRemoveStop,
   handleDragEnd,
   sensors,
+  arrivalTimes,
 }: {
   showCustomers: boolean;
   setShowCustomers: (v: boolean) => void;
@@ -226,6 +241,7 @@ function ListContent({
   handleRemoveStop: (id: string) => void;
   handleDragEnd: (e: DragEndEvent) => void;
   sensors: any;
+  arrivalTimes: { arrival: string; driveTime: string }[];
 }) {
   return (
     <div className="flex flex-col h-full">
@@ -331,6 +347,8 @@ function ListContent({
                         onRemove={() => handleRemoveStop(stop.id)}
                         isSelected={selectedStopId === stop.id}
                         onSelect={() => setSelectedStopId(stop.id)}
+                        arrivalTime={arrivalTimes[index]?.arrival}
+                        driveTime={arrivalTimes[index]?.driveTime}
                       />
                     ))}
                   </SortableContext>
@@ -395,6 +413,9 @@ export function RouteMapView({ routeId, onBack }: RouteMapViewProps) {
   const [showCustomers, setShowCustomers] = useState(true);
   const [mobileView, setMobileView] = useState<'map' | 'list'>('map');
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [legDurations, setLegDurations] = useState<LegDuration[]>([]);
+  const [startTime, setStartTime] = useState<string>('');
+  const startTimeRef = useRef<NodeJS.Timeout>();
 
   const { data: routeWithStops, isLoading: routeLoading } = useRouteWithStops(routeId);
   const { data: customersData, isLoading: customersLoading } = useCustomers(
@@ -405,6 +426,59 @@ export function RouteMapView({ routeId, onBack }: RouteMapViewProps) {
   const addStop = useAddStop();
   const removeStop = useRemoveStop();
   const reorderStops = useReorderStops();
+  const updateRoute = useUpdateRoute();
+
+  // Startzeit aus DB laden
+  useEffect(() => {
+    if (routeWithStops?.start_time) {
+      // Format: "HH:MM:SS" -> "HH:MM"
+      setStartTime(routeWithStops.start_time.slice(0, 5));
+    }
+  }, [routeWithStops?.start_time]);
+
+  // Startzeit speichern (mit Debounce)
+  const handleStartTimeChange = (value: string) => {
+    setStartTime(value);
+    if (startTimeRef.current) clearTimeout(startTimeRef.current);
+    startTimeRef.current = setTimeout(() => {
+      updateRoute.mutate({
+        id: routeId,
+        start_time: value ? `${value}:00` : null,
+      });
+    }, 500);
+  };
+
+  // Ankunftszeiten berechnen
+  const arrivalTimes = useMemo(() => {
+    if (!startTime || !routeWithStops?.stops.length) return [];
+
+    const visitDuration = routeWithStops.default_visit_duration || 20;
+    const times: { arrival: string; driveTime: string }[] = [];
+    const [hours, minutes] = startTime.split(':').map(Number);
+    let currentTime = hours * 60 + minutes; // in Minuten
+
+    routeWithStops.stops.forEach((_, index) => {
+      // Fahrzeit zum aktuellen Stop (der erste Stop hat die Fahrzeit vom Start)
+      const driveSeconds = index === 0 ? 0 : (legDurations[index - 1]?.durationSeconds || 0);
+      const driveMinutes = Math.ceil(driveSeconds / 60);
+      currentTime += driveMinutes;
+
+      // Ankunftszeit formatieren
+      const arrivalHours = Math.floor(currentTime / 60) % 24;
+      const arrivalMins = currentTime % 60;
+      const arrivalStr = `${arrivalHours.toString().padStart(2, '0')}:${arrivalMins.toString().padStart(2, '0')}`;
+
+      // Fahrzeit Text
+      const driveText = index === 0 ? '' : legDurations[index - 1]?.durationText || '';
+
+      times.push({ arrival: arrivalStr, driveTime: driveText });
+
+      // Aufenthalt addieren für nächsten Stop
+      currentTime += visitDuration;
+    });
+
+    return times;
+  }, [startTime, legDurations, routeWithStops]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -525,6 +599,7 @@ export function RouteMapView({ routeId, onBack }: RouteMapViewProps) {
     handleRemoveStop,
     handleDragEnd,
     sensors,
+    arrivalTimes,
   };
 
   return (
@@ -540,9 +615,20 @@ export function RouteMapView({ routeId, onBack }: RouteMapViewProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Startzeit */}
+          <div className="flex items-center gap-1">
+            <Clock className="h-4 w-4 text-muted-foreground hidden sm:block" />
+            <Input
+              type="time"
+              value={startTime}
+              onChange={(e) => handleStartTimeChange(e.target.value)}
+              className="w-[70px] sm:w-24 h-8 text-sm"
+              placeholder="Start"
+            />
+          </div>
           {routeStats && (
-            <Badge variant="outline" className="hidden sm:flex gap-1">
+            <Badge variant="outline" className="hidden lg:flex gap-1">
               <MapPin className="h-3 w-3" />
               {routeStats.stops}
             </Badge>
@@ -551,10 +637,10 @@ export function RouteMapView({ routeId, onBack }: RouteMapViewProps) {
             onClick={openGoogleMapsNavigation}
             disabled={!routeWithStops?.stops.length}
             size="sm"
-            className="gap-1"
+            className="gap-1 shrink-0"
           >
             <Navigation className="h-4 w-4" />
-            <span className="hidden sm:inline">Navigation</span>
+            <span className="hidden lg:inline">Navigation</span>
           </Button>
         </div>
       </div>
@@ -562,7 +648,7 @@ export function RouteMapView({ routeId, onBack }: RouteMapViewProps) {
       {/* Desktop: Split View */}
       <div className="flex-1 hidden md:flex overflow-hidden">
         {/* Left Panel */}
-        <div className="w-80 lg:w-96 border-r flex flex-col bg-background">
+        <div className="w-72 lg:w-80 xl:w-96 border-r flex flex-col bg-background overflow-hidden">
           <ListContent {...listContentProps} />
         </div>
 
@@ -580,6 +666,7 @@ export function RouteMapView({ routeId, onBack }: RouteMapViewProps) {
                 setSelectedStopId(stop.id);
                 setShowCustomers(false);
               }}
+              onDurationsCalculated={setLegDurations}
               selectedCustomerId={selectedCustomerId}
               showRoute={!showCustomers}
               className="w-full h-full"
@@ -629,6 +716,7 @@ export function RouteMapView({ routeId, onBack }: RouteMapViewProps) {
                   setShowCustomers(false);
                   setMobileView('list');
                 }}
+                onDurationsCalculated={setLegDurations}
                 selectedCustomerId={selectedCustomerId}
                 showRoute={true}
                 className="w-full h-full"

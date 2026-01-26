@@ -12,11 +12,18 @@ const DEFAULT_ZOOM = 6;
 // Globaler Cache - bleibt während der ganzen Session
 const coordsCache = new Map<number, { lat: number; lng: number }>();
 
+// Fahrzeit-Informationen zwischen Stops
+export interface LegDuration {
+  durationSeconds: number;
+  durationText: string;
+}
+
 interface RouteMapProps {
   stops: RouteStopWithCustomer[];
   availableCustomers?: Customer[];
   onCustomerClick?: (customer: Customer) => void;
   onStopClick?: (stop: RouteStopWithCustomer) => void;
+  onDurationsCalculated?: (durations: LegDuration[]) => void;
   showRoute?: boolean;
   selectedCustomerId?: number | null;
   className?: string;
@@ -27,6 +34,7 @@ export function RouteMap({
   availableCustomers = [],
   onCustomerClick,
   onStopClick,
+  onDurationsCalculated,
   showRoute = true,
   selectedCustomerId,
   className = '',
@@ -190,10 +198,19 @@ export function RouteMap({
       (result, status) => {
         if (status === 'OK' && result) {
           directionsRenderer.setDirections(result);
+
+          // Fahrzeiten extrahieren und nach oben geben
+          if (onDurationsCalculated && result.routes[0]?.legs) {
+            const durations: LegDuration[] = result.routes[0].legs.map(leg => ({
+              durationSeconds: leg.duration?.value || 0,
+              durationText: leg.duration?.text || '',
+            }));
+            onDurationsCalculated(durations);
+          }
         }
       }
     );
-  }, [directionsRenderer, routesLibrary, stops, showRoute]);
+  }, [directionsRenderer, routesLibrary, stops, showRoute, onDurationsCalculated]);
 
   // Fit bounds einmalig
   useEffect(() => {

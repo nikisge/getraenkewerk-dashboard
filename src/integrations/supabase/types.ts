@@ -390,6 +390,8 @@ export type Database = {
           rep_id: number
           name: string
           weekday: string | null
+          start_time: string | null
+          default_visit_duration: number
           created_at: string
           updated_at: string
         }
@@ -398,6 +400,8 @@ export type Database = {
           rep_id: number
           name: string
           weekday?: string | null
+          start_time?: string | null
+          default_visit_duration?: number
           created_at?: string
           updated_at?: string
         }
@@ -406,6 +410,8 @@ export type Database = {
           rep_id?: number
           name?: string
           weekday?: string | null
+          start_time?: string | null
+          default_visit_duration?: number
           created_at?: string
           updated_at?: string
         }
