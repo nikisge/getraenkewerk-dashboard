@@ -37,7 +37,7 @@ export function useActivityLog(
       const to = from + pageSize - 1;
 
       let query = supabase
-        .from("activity_log")
+        .from("ActivityLog_getraenke")
         .select("*", { count: "exact" })
         .order("created_at", { ascending: false })
         .range(from, to);

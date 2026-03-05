@@ -28,7 +28,7 @@ export function logActivity({ repId, actionType, entityType, entityId, details }
 
   // Fire-and-forget — never block the caller
   supabase
-    .from("activity_log")
+    .from("ActivityLog_getraenke")
     .insert({
       rep_id: repId,
       action_type: actionType,

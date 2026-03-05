@@ -14,7 +14,7 @@ export type Database = {
   }
   public: {
     Tables: {
-      activity_log: {
+      ActivityLog_getraenke: {
         Row: {
           id: number
           rep_id: number
@@ -47,7 +47,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "activity_log_rep_id_fkey"
+            foreignKeyName: "ActivityLog_getraenke_rep_id_fkey"
             columns: ["rep_id"]
             isOneToOne: false
             referencedRelation: "reps"
