@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables, TablesInsert } from "@/integrations/supabase/types";
+import { logActivity, getSessionRepId } from "@/features/activity/services/activityLogger";
 
 export type Customer = Tables<"dim_customers">;
 
@@ -115,8 +116,10 @@ export function useUpdateCustomer() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
+      const repId = getSessionRepId();
+      if (repId) logActivity({ repId, actionType: "update", entityType: "customer", entityId: String(variables.kunden_nummer) });
     },
   });
 }
@@ -135,8 +138,10 @@ export function useCreateCustomer() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
+      const repId = getSessionRepId();
+      if (repId) logActivity({ repId, actionType: "create", entityType: "customer", entityId: String(data.kunden_nummer) });
     },
   });
 }

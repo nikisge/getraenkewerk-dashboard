@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_log: {
+        Row: {
+          id: number
+          rep_id: number
+          action_type: string
+          entity_type: string | null
+          entity_id: string | null
+          details: Json | null
+          user_agent: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          rep_id: number
+          action_type: string
+          entity_type?: string | null
+          entity_id?: string | null
+          details?: Json | null
+          user_agent?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          rep_id?: number
+          action_type?: string
+          entity_type?: string | null
+          entity_id?: string | null
+          details?: Json | null
+          user_agent?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_log_rep_id_fkey"
+            columns: ["rep_id"]
+            isOneToOne: false
+            referencedRelation: "reps"
+            referencedColumns: ["rep_id"]
+          },
+        ]
+      }
       actions: {
         Row: {
           acceptance: string | null

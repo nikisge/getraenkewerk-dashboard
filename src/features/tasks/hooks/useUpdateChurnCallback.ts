@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logActivity, getSessionRepId } from "@/features/activity/services/activityLogger";
 
 export function useUpdateChurnCallback() {
   const queryClient = useQueryClient();
@@ -45,10 +46,12 @@ export function useUpdateChurnCallback() {
       console.log("✅ Churn callback updated successfully:", data);
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["dashboard_tasks"] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["rep-completed-activities"] });
+      const repId = getSessionRepId();
+      if (repId) logActivity({ repId, actionType: "update", entityType: "churn_callback", entityId: variables.id });
     },
   });
 }

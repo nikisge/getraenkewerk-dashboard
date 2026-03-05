@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
 import { Customer } from "./useCustomers";
+import { logActivity, getSessionRepId } from "@/features/activity/services/activityLogger";
 
 export type Route = Tables<"routes">;
 export type RouteStop = Tables<"route_stops">;
@@ -99,8 +100,10 @@ export function useCreateRoute() {
             if (error) throw error;
             return data;
         },
-        onSuccess: (_, variables) => {
+        onSuccess: (data, variables) => {
             queryClient.invalidateQueries({ queryKey: ["routes", variables.repId] });
+            const repId = getSessionRepId();
+            if (repId) logActivity({ repId, actionType: "create", entityType: "route", entityId: data.id });
         },
     });
 }
@@ -131,9 +134,11 @@ export function useUpdateRoute() {
             if (error) throw error;
             return data;
         },
-        onSuccess: () => {
+        onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: ["routes"] });
             queryClient.invalidateQueries({ queryKey: ["route"] });
+            const repId = getSessionRepId();
+            if (repId) logActivity({ repId, actionType: "update", entityType: "route", entityId: variables.id });
         },
     });
 }
@@ -151,8 +156,10 @@ export function useDeleteRoute() {
 
             if (error) throw error;
         },
-        onSuccess: () => {
+        onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: ["routes"] });
+            const repId = getSessionRepId();
+            if (repId) logActivity({ repId, actionType: "delete", entityType: "route", entityId: variables });
         },
     });
 }
@@ -172,8 +179,10 @@ export function useAddStop() {
             if (error) throw error;
             return data;
         },
-        onSuccess: (_, variables) => {
+        onSuccess: (data, variables) => {
             queryClient.invalidateQueries({ queryKey: ["route", variables.routeId] });
+            const repId = getSessionRepId();
+            if (repId) logActivity({ repId, actionType: "create", entityType: "route_stop", entityId: data.id });
         },
     });
 }
@@ -192,8 +201,10 @@ export function useRemoveStop() {
             if (error) throw error;
             return routeId;
         },
-        onSuccess: (routeId) => {
+        onSuccess: (routeId, variables) => {
             queryClient.invalidateQueries({ queryKey: ["route", routeId] });
+            const repId = getSessionRepId();
+            if (repId) logActivity({ repId, actionType: "delete", entityType: "route_stop", entityId: variables.stopId });
         },
     });
 }

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables, TablesInsert } from "@/integrations/supabase/types";
+import { logActivity, getSessionRepId } from "@/features/activity/services/activityLogger";
 
 export type Rep = Tables<"reps">;
 
@@ -33,8 +34,10 @@ export function useCreateRep() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["reps"] });
+      const repId = getSessionRepId();
+      if (repId) logActivity({ repId, actionType: "create", entityType: "rep", entityId: String(data.rep_id) });
     },
   });
 }

@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { logActivity, setSessionRepId, clearSessionRepId } from '@/features/activity/services/activityLogger';
+import { parseUserAgent } from '@/features/activity/services/parseUserAgent';
 
 const SESSION_KEY = 'crm_session_token';
 
@@ -49,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.removeItem(SESSION_KEY);
           setRep(null);
         } else {
+          setSessionRepId(data.rep_id);
           setRep({
             rep_id: data.rep_id,
             name: data.name,
@@ -86,6 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Auth token als session token verwenden
       localStorage.setItem(SESSION_KEY, authToken);
+      setSessionRepId(data.rep_id);
 
       setRep({
         rep_id: data.rep_id,
@@ -94,6 +98,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         telegram_chat_id: data.telegram_chat_id,
         telegram_username: data.telegram_username,
         role: data.is_admin ? 'admin' : 'rep',
+      });
+
+      logActivity({
+        repId: data.rep_id,
+        actionType: "login",
+        details: parseUserAgent(navigator.userAgent),
       });
 
       navigate('/');
@@ -105,6 +115,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    if (rep) {
+      logActivity({ repId: rep.rep_id, actionType: "logout" });
+    }
+    clearSessionRepId();
     localStorage.removeItem(SESSION_KEY);
     setRep(null);
     navigate('/auth');

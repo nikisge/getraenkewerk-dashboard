@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables, TablesInsert } from "@/integrations/supabase/types";
+import { logActivity, getSessionRepId } from "@/features/activity/services/activityLogger";
 
 export type Campaign = Tables<"campaigns">;
 
@@ -33,8 +34,10 @@ export function useCreateCampaign() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      const repId = getSessionRepId();
+      if (repId) logActivity({ repId, actionType: "create", entityType: "campaign", entityId: String(data.id) });
     },
   });
 }
@@ -54,8 +57,10 @@ export function useUpdateCampaign() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      const repId = getSessionRepId();
+      if (repId) logActivity({ repId, actionType: "update", entityType: "campaign", entityId: String(variables.id) });
     },
   });
 }
@@ -72,8 +77,10 @@ export function useDeleteCampaign() {
 
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      const repId = getSessionRepId();
+      if (repId) logActivity({ repId, actionType: "delete", entityType: "campaign", entityId: String(variables) });
     },
   });
 }

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables, TablesInsert } from "@/integrations/supabase/types";
+import { logActivity, getSessionRepId } from "@/features/activity/services/activityLogger";
 
 export type Action = Tables<"actions">;
 
@@ -87,8 +88,10 @@ export function useUpdateAction() {
       if (!data) throw new Error("Update fehlgeschlagen - keine Daten zurückgegeben. Möglicherweise RLS-Problem.");
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["actions"] });
+      const repId = getSessionRepId();
+      if (repId) logActivity({ repId, actionType: "update", entityType: "action", entityId: String(variables.id) });
     },
   });
 }
@@ -105,8 +108,10 @@ export function useDeleteAction() {
 
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["actions"] });
+      const repId = getSessionRepId();
+      if (repId) logActivity({ repId, actionType: "delete", entityType: "action", entityId: String(variables) });
     },
   });
 }
