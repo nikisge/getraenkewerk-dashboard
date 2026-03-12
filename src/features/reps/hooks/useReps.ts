@@ -11,7 +11,7 @@ export function useReps() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reps")
-        .select("*")
+        .select("rep_id, name, telegram_chat_id, telegram_username, is_admin")
         .order("name");
       
       if (error) throw error;
@@ -28,7 +28,7 @@ export function useCreateRep() {
       const { data, error } = await supabase
         .from("reps")
         .insert(rep)
-        .select()
+        .select("rep_id, name, telegram_chat_id, telegram_username, is_admin")
         .single();
       
       if (error) throw error;
