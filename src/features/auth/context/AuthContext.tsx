@@ -5,8 +5,10 @@ import { logActivity, setSessionRepId, clearSessionRepId } from '@/features/acti
 import { parseUserAgent } from '@/features/activity/services/parseUserAgent';
 
 const SESSION_KEY = 'crm_session_token';
+const LAST_ACTIVE_KEY = 'crm_last_active';
 const INACTIVITY_TIMEOUT_MS = 4 * 60 * 60 * 1000; // 4 Stunden
 const INACTIVITY_CHECK_INTERVAL_MS = 60 * 1000; // Jede Minute prüfen
+const SESSION_STALE_MS = 5 * 60 * 1000; // 5 Minuten — wenn älter, wurde der Tab geschlossen
 
 export interface AuthRep {
   rep_id: number;
@@ -35,18 +37,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const validateExistingSession = async () => {
       const token = sessionStorage.getItem(SESSION_KEY);
+      const lastActive = sessionStorage.getItem(LAST_ACTIVE_KEY);
 
-      if (!token) {
+      // Kein Token oder Session veraltet (Tab wurde geschlossen und Browser hat sessionStorage wiederhergestellt)
+      const isStale = lastActive && (Date.now() - Number(lastActive)) > SESSION_STALE_MS;
+      if (!token || isStale) {
+        sessionStorage.removeItem(SESSION_KEY);
+        sessionStorage.removeItem(LAST_ACTIVE_KEY);
         setLoading(false);
         return;
       }
 
       try {
-        // Prüfe ob auth_token noch gültig ist
+        // Token über sichere RPC-Funktion prüfen (auth_token nicht direkt lesbar)
         const { data, error } = await supabase
-          .from('reps')
-          .select('rep_id, name, telegram_chat_id, telegram_username, is_admin, auth_token')
-          .eq('auth_token', token)
+          .rpc('verify_auth_token', { p_token: token })
           .single();
 
         if (error || !data) {
@@ -77,11 +82,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (authToken: string) => {
     try {
-      // Direkt mit auth_token aus reps Tabelle einloggen
+      // Token über sichere RPC-Funktion prüfen (auth_token nicht direkt lesbar)
       const { data, error } = await supabase
-        .from('reps')
-        .select('rep_id, name, telegram_chat_id, telegram_username, is_admin, auth_token')
-        .eq('auth_token', authToken)
+        .rpc('verify_auth_token', { p_token: authToken })
         .single();
 
       if (error || !data) {
@@ -91,6 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Auth token als session token verwenden
       sessionStorage.setItem(SESSION_KEY, authToken);
+      sessionStorage.setItem(LAST_ACTIVE_KEY, String(Date.now()));
       setSessionRepId(data.rep_id);
 
       setRep({
@@ -122,6 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     clearSessionRepId();
     sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(LAST_ACTIVE_KEY);
     setRep(null);
     navigate('/auth');
   };
@@ -140,13 +145,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'] as const;
     events.forEach((event) => window.addEventListener(event, resetActivity));
 
-    // Regelmäßig prüfen ob Timeout erreicht
+    // Regelmäßig prüfen ob Timeout erreicht + Heartbeat für Tab-Erkennung
     const interval = setInterval(() => {
+      sessionStorage.setItem(LAST_ACTIVE_KEY, String(Date.now()));
       const elapsed = Date.now() - lastActivityRef.current;
       if (elapsed >= INACTIVITY_TIMEOUT_MS) {
         logActivity({ repId: rep.rep_id, actionType: "session_timeout" });
         clearSessionRepId();
         sessionStorage.removeItem(SESSION_KEY);
+        sessionStorage.removeItem(LAST_ACTIVE_KEY);
         setRep(null);
         navigate('/auth');
       }
