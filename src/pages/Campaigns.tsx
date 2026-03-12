@@ -10,7 +10,7 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Badge } from "@/shared/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { Button } from "@/shared/components/ui/button";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, RotateCcw, Eye, EyeOff } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/shared/components/ui/alert-dialog";
 import { toast } from "sonner";
 
@@ -21,10 +21,14 @@ export default function Campaigns() {
   const { rep } = useAuth();
   const [editingCampaign, setEditingCampaign] = useState<any>(null);
   const [editingAction, setEditingAction] = useState<any>(null);
+  const [showInactive, setShowInactive] = useState(false);
   const { data: campaigns, isLoading: campaignsLoading } = useCampaigns();
   const { data: actions, isLoading: actionsLoading } = useActions();
   const deleteCampaign = useDeleteCampaign();
+  const updateCampaign = useUpdateCampaign();
   const deleteAction = useDeleteAction();
+
+  const filteredCampaigns = campaigns?.filter((c) => c.is_active !== showInactive) ?? [];
 
   const handleDeleteCampaign = async (id: number, campaign_code: string, name: string) => {
     try {
@@ -32,6 +36,16 @@ export default function Campaigns() {
       toast.success(`Kampagne "${name}" wurde deaktiviert`);
     } catch (error) {
       toast.error("Fehler beim Deaktivieren der Kampagne");
+      console.error(error);
+    }
+  };
+
+  const handleReactivateCampaign = async (id: number, name: string) => {
+    try {
+      await updateCampaign.mutateAsync({ id, updates: { is_active: true } });
+      toast.success(`Kampagne "${name}" wurde reaktiviert`);
+    } catch (error) {
+      toast.error("Fehler beim Reaktivieren der Kampagne");
       console.error(error);
     }
   };
@@ -70,8 +84,21 @@ export default function Campaigns() {
 
         <TabsContent value="articles" className="space-y-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <h2 className="text-xl font-semibold">Neue Artikel im Sortiment</h2>
-            {rep?.role === 'admin' && (
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-semibold">Neue Artikel im Sortiment</h2>
+              {rep?.role === 'admin' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground text-xs gap-1.5"
+                  onClick={() => setShowInactive(!showInactive)}
+                >
+                  {showInactive ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  {showInactive ? "Aktive" : "Inaktive"}
+                </Button>
+              )}
+            </div>
+            {rep?.role === 'admin' && !showInactive && (
               <NewCampaignModal>
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
@@ -100,14 +127,14 @@ export default function Campaigns() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {campaigns?.length === 0 ? (
+                      {filteredCampaigns.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                            Keine Artikel vorhanden
+                          <TableCell colSpan={rep?.role === 'admin' ? 7 : 6} className="text-center text-muted-foreground py-8">
+                            {showInactive ? "Keine inaktiven Artikel vorhanden" : "Keine Artikel vorhanden"}
                           </TableCell>
                         </TableRow>
                       ) : (
-                        campaigns?.map((campaign) => (
+                        filteredCampaigns.map((campaign) => (
                           <TableRow
                             key={campaign.id}
                             className={`hover:bg-muted/50 transition-colors ${rep?.role === 'admin' ? 'cursor-pointer' : ''}`}
@@ -140,27 +167,38 @@ export default function Campaigns() {
                             </TableCell>
                             {rep?.role === 'admin' && (
                               <TableCell className="px-2 md:px-4" onClick={(e) => e.stopPropagation()}>
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                      <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Kampagne deaktivieren?</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Kampagne "{campaign.name}" wird deaktiviert. Offene Tasks (noch nicht bearbeitet) werden gelöscht. Bereits bearbeitete Tasks bleiben erhalten.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                                      <AlertDialogAction onClick={() => handleDeleteCampaign(campaign.id, campaign.campaign_code, campaign.name)}>
-                                        Deaktivieren
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
+                                {campaign.is_active ? (
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Kampagne deaktivieren?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Kampagne "{campaign.name}" wird deaktiviert. Offene Tasks (noch nicht bearbeitet) werden gelöscht. Bereits bearbeitete Tasks bleiben erhalten.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteCampaign(campaign.id, campaign.campaign_code, campaign.name)}>
+                                          Deaktivieren
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                ) : (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => handleReactivateCampaign(campaign.id, campaign.name)}
+                                  >
+                                    <RotateCcw className="h-4 w-4 text-green-600" />
+                                  </Button>
+                                )}
                               </TableCell>
                             )}
                           </TableRow>
