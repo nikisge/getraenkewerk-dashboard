@@ -4,7 +4,7 @@ const SESSION_REP_KEY = "activity_log_rep_id";
 
 interface LogActivityParams {
   repId: number;
-  actionType: "login" | "logout" | "create" | "update" | "delete";
+  actionType: "login" | "logout" | "session_timeout" | "create" | "update" | "delete";
   entityType?: string;
   entityId?: string;
   details?: Record<string, unknown>;

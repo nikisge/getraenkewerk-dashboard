@@ -1,10 +1,12 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { logActivity, setSessionRepId, clearSessionRepId } from '@/features/activity/services/activityLogger';
 import { parseUserAgent } from '@/features/activity/services/parseUserAgent';
 
 const SESSION_KEY = 'crm_session_token';
+const INACTIVITY_TIMEOUT_MS = 4 * 60 * 60 * 1000; // 4 Stunden
+const INACTIVITY_CHECK_INTERVAL_MS = 60 * 1000; // Jede Minute prüfen
 
 export interface AuthRep {
   rep_id: number;
@@ -32,7 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Session beim Start validieren
   useEffect(() => {
     const validateExistingSession = async () => {
-      const token = localStorage.getItem(SESSION_KEY);
+      const token = sessionStorage.getItem(SESSION_KEY);
 
       if (!token) {
         setLoading(false);
@@ -48,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .single();
 
         if (error || !data) {
-          localStorage.removeItem(SESSION_KEY);
+          sessionStorage.removeItem(SESSION_KEY);
           setRep(null);
         } else {
           setSessionRepId(data.rep_id);
@@ -63,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (err) {
         console.error('Session validation error:', err);
-        localStorage.removeItem(SESSION_KEY);
+        sessionStorage.removeItem(SESSION_KEY);
         setRep(null);
       }
 
@@ -88,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Auth token als session token verwenden
-      localStorage.setItem(SESSION_KEY, authToken);
+      sessionStorage.setItem(SESSION_KEY, authToken);
       setSessionRepId(data.rep_id);
 
       setRep({
@@ -119,10 +121,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logActivity({ repId: rep.rep_id, actionType: "logout" });
     }
     clearSessionRepId();
-    localStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(SESSION_KEY);
     setRep(null);
     navigate('/auth');
   };
+
+  // Inaktivitäts-Timeout: nach 4 Stunden ohne Aktivität automatisch ausloggen
+  const lastActivityRef = useRef(Date.now());
+
+  const resetActivity = useCallback(() => {
+    lastActivityRef.current = Date.now();
+  }, []);
+
+  useEffect(() => {
+    if (!rep) return;
+
+    // Aktivität bei User-Interaktion zurücksetzen
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'] as const;
+    events.forEach((event) => window.addEventListener(event, resetActivity));
+
+    // Regelmäßig prüfen ob Timeout erreicht
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - lastActivityRef.current;
+      if (elapsed >= INACTIVITY_TIMEOUT_MS) {
+        logActivity({ repId: rep.rep_id, actionType: "session_timeout" });
+        clearSessionRepId();
+        sessionStorage.removeItem(SESSION_KEY);
+        setRep(null);
+        navigate('/auth');
+      }
+    }, INACTIVITY_CHECK_INTERVAL_MS);
+
+    return () => {
+      events.forEach((event) => window.removeEventListener(event, resetActivity));
+      clearInterval(interval);
+    };
+  }, [rep, navigate, resetActivity]);
 
   return (
     <AuthContext.Provider value={{ rep, signIn, signOut, loading }}>

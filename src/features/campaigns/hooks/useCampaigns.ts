@@ -69,18 +69,27 @@ export function useDeleteCampaign() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (campaign: { id: number; campaign_code: string }) => {
+      // 1. Unberührte Tasks löschen (status = 'NO')
+      const { error: tasksError } = await supabase
+        .from("tasks")
+        .delete()
+        .eq("campaign_code", campaign.campaign_code)
+        .eq("status", "NO");
+      if (tasksError) throw tasksError;
+
+      // 2. Kampagne deaktivieren (Soft Delete)
       const { error } = await supabase
         .from("campaigns")
-        .delete()
-        .eq("id", id);
-
+        .update({ is_active: false })
+        .eq("id", campaign.id);
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
       const repId = getSessionRepId();
-      if (repId) logActivity({ repId, actionType: "delete", entityType: "campaign", entityId: String(variables) });
+      if (repId) logActivity({ repId, actionType: "delete", entityType: "campaign", entityId: String(variables.id) });
     },
   });
 }

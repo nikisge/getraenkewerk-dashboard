@@ -26,12 +26,12 @@ export default function Campaigns() {
   const deleteCampaign = useDeleteCampaign();
   const deleteAction = useDeleteAction();
 
-  const handleDeleteCampaign = async (id: number, name: string) => {
+  const handleDeleteCampaign = async (id: number, campaign_code: string, name: string) => {
     try {
-      await deleteCampaign.mutateAsync(id);
-      toast.success(`Kampagne "${name}" wurde gelöscht`);
+      await deleteCampaign.mutateAsync({ id, campaign_code });
+      toast.success(`Kampagne "${name}" wurde deaktiviert`);
     } catch (error) {
-      toast.error("Fehler beim Löschen der Kampagne");
+      toast.error("Fehler beim Deaktivieren der Kampagne");
       console.error(error);
     }
   };
@@ -148,15 +148,15 @@ export default function Campaigns() {
                                   </AlertDialogTrigger>
                                   <AlertDialogContent>
                                     <AlertDialogHeader>
-                                      <AlertDialogTitle>Kampagne löschen?</AlertDialogTitle>
+                                      <AlertDialogTitle>Kampagne deaktivieren?</AlertDialogTitle>
                                       <AlertDialogDescription>
-                                        Möchten Sie "{campaign.name}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+                                        Kampagne "{campaign.name}" wird deaktiviert. Offene Tasks (noch nicht bearbeitet) werden gelöscht. Bereits bearbeitete Tasks bleiben erhalten.
                                       </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                       <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                                      <AlertDialogAction onClick={() => handleDeleteCampaign(campaign.id, campaign.name)}>
-                                        Löschen
+                                      <AlertDialogAction onClick={() => handleDeleteCampaign(campaign.id, campaign.campaign_code, campaign.name)}>
+                                        Deaktivieren
                                       </AlertDialogAction>
                                     </AlertDialogFooter>
                                   </AlertDialogContent>
