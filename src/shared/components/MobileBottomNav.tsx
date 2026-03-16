@@ -1,5 +1,5 @@
 import { NavLink, useSearchParams } from "react-router-dom";
-import { LayoutDashboard, ClipboardList, Target, Users, FileText, Zap, Navigation, Gift, Megaphone } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Target, Users, FileText, Zap, Navigation, Gift, Megaphone, Compass } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { useAuth } from "@/features/auth/context/AuthContext";
 
@@ -14,6 +14,7 @@ export function MobileBottomNav() {
     { to: "/task-distribution", icon: ClipboardList, label: "Verteilung", roles: ['admin'] },
     { to: "/campaigns", icon: Target, label: "Campaigns", roles: ['admin'] },
     { to: "/customers", icon: Users, label: "Kunden", roles: ['admin'] },
+    { to: "/lead-research", icon: Compass, label: "Leads", roles: ['admin'] },
   ];
 
   // Rep nav items - alle wichtigen Tabs direkt erreichbar

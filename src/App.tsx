@@ -15,6 +15,7 @@ import CampaignPerformance from "@/pages/CampaignPerformance";
 import RoutePlanning from "@/pages/RoutePlanning";
 import Auth from "@/pages/Auth";
 import ActivityLog from "@/pages/ActivityLog";
+import LeadResearch from "@/pages/LeadResearch";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/task-distribution" element={<ProtectedRoute><AdminRoute><Layout><TaskDistribution /></Layout></AdminRoute></ProtectedRoute>} />
             <Route path="/campaign-performance" element={<ProtectedRoute><AdminRoute><Layout><CampaignPerformance /></Layout></AdminRoute></ProtectedRoute>} />
             <Route path="/activity" element={<ProtectedRoute><AdminRoute><Layout><ActivityLog /></Layout></AdminRoute></ProtectedRoute>} />
+            <Route path="/lead-research" element={<ProtectedRoute><AdminRoute><Layout><LeadResearch /></Layout></AdminRoute></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

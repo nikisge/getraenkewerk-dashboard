@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Target, Users, LogOut, ClipboardList, Menu, BarChart3, Navigation, Activity } from "lucide-react";
+import { LayoutDashboard, Target, Users, LogOut, ClipboardList, Menu, BarChart3, Navigation, Activity, Compass } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { Button } from "@/shared/components/ui/button";
@@ -29,6 +29,7 @@ export function Layout({ children }: LayoutProps) {
     { to: "/campaigns", icon: Target, label: "Campaigns", roles: ['admin'] },
     { to: "/campaign-performance", icon: BarChart3, label: "Kampagnen Performance", roles: ['admin'] },
     { to: "/customers", icon: Users, label: "Customers", roles: ['admin'] },
+    { to: "/lead-research", icon: Compass, label: "Lead Recherche", roles: ['admin'] },
     { to: "/activity", icon: Activity, label: "Aktivität", roles: ['admin'] },
   ];
 

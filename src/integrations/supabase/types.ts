@@ -338,6 +338,112 @@ export type Database = {
           },
         ]
       }
+      gw_lead_searches: {
+        Row: {
+          id: number
+          rep_id: number
+          search_term: string
+          location: string
+          max_results: number | null
+          result_count: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          rep_id: number
+          search_term: string
+          location: string
+          max_results?: number | null
+          result_count?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          rep_id?: number
+          search_term?: string
+          location?: string
+          max_results?: number | null
+          result_count?: number | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gw_lead_searches_rep_id_fkey"
+            columns: ["rep_id"]
+            isOneToOne: false
+            referencedRelation: "reps"
+            referencedColumns: ["rep_id"]
+          },
+        ]
+      }
+      gw_leads: {
+        Row: {
+          id: number
+          search_id: number
+          place_id: string | null
+          name: string
+          address: string | null
+          phone: string | null
+          website: string | null
+          rating: number | null
+          rating_count: number | null
+          category: string | null
+          google_maps_url: string | null
+          latitude: number | null
+          longitude: number | null
+          status: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          search_id: number
+          place_id?: string | null
+          name: string
+          address?: string | null
+          phone?: string | null
+          website?: string | null
+          rating?: number | null
+          rating_count?: number | null
+          category?: string | null
+          google_maps_url?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          status?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          search_id?: number
+          place_id?: string | null
+          name?: string
+          address?: string | null
+          phone?: string | null
+          website?: string | null
+          rating?: number | null
+          rating_count?: number | null
+          category?: string | null
+          google_maps_url?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          status?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gw_leads_search_id_fkey"
+            columns: ["search_id"]
+            isOneToOne: false
+            referencedRelation: "gw_lead_searches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       etl_log: {
         Row: {
           errors: Json | null
