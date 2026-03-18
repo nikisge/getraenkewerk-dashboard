@@ -22,7 +22,7 @@ interface LeadRouteProgressProps {
 export function LeadRouteProgress({ routeId, isOpen, onClose }: LeadRouteProgressProps) {
   const { data: route, isLoading } = useLeadRouteProgress(routeId || undefined);
   const { rep } = useAuth();
-  const isAdmin = rep?.is_admin;
+  const isAdmin = rep?.role === "admin";
   const deleteRoute = useDeleteLeadRoute();
   const updateRoute = useUpdateLeadRoute();
   const { data: reps } = useReps();
