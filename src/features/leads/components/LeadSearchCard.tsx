@@ -5,9 +5,10 @@ import { LeadSearch } from "../hooks/useLeadSearches";
 interface LeadSearchCardProps {
   search: LeadSearch;
   onClick: (searchId: number) => void;
+  isActive?: boolean;
 }
 
-export function LeadSearchCard({ search, onClick }: LeadSearchCardProps) {
+export function LeadSearchCard({ search, onClick, isActive }: LeadSearchCardProps) {
   const placeIds = search.found_place_ids as string[] | null;
   const totalLeads = placeIds?.length || search.result_count || 0;
   const newLeads = search.new_leads_count ?? 0;
@@ -15,7 +16,7 @@ export function LeadSearchCard({ search, onClick }: LeadSearchCardProps) {
 
   return (
     <Card
-      className="cursor-pointer hover:bg-muted/50 transition-colors"
+      className={`cursor-pointer hover:bg-muted/50 transition-colors ${isActive ? "ring-2 ring-primary" : ""}`}
       onClick={() => onClick(search.id)}
     >
       <CardContent className="p-4 space-y-2">

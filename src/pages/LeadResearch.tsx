@@ -112,8 +112,7 @@ export default function LeadResearch() {
   };
 
   const handleSearchCardClick = (searchId: number) => {
-    setSelectedSearchId(searchId);
-    setActiveTab("search");
+    setSelectedSearchId(searchId === selectedSearchId ? null : searchId);
   };
 
   const toggleSelectionMode = () => {
@@ -211,7 +210,7 @@ export default function LeadResearch() {
         </TabsContent>
 
         {/* Tab: Meine Suchen */}
-        <TabsContent value="history">
+        <TabsContent value="history" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Vergangene Suchen</CardTitle>
@@ -230,12 +229,36 @@ export default function LeadResearch() {
                       key={search.id}
                       search={search}
                       onClick={handleSearchCardClick}
+                      isActive={search.id === selectedSearchId}
                     />
                   ))}
                 </div>
               )}
             </CardContent>
           </Card>
+
+          {/* Ergebnisse der ausgewählten vergangenen Suche */}
+          {selectedSearchId && activeTab === "history" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  Suchergebnisse
+                  {selectedSearch && (
+                    <span className="ml-2 text-sm font-normal text-muted-foreground">
+                      "{selectedSearch.search_term}" in {selectedSearch.location}
+                      {" — "}{selectedPlaceIds?.length || 0} Leads
+                    </span>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <LeadSearchResults
+                  leads={searchLeads || []}
+                  isLoading={searchLeadsLoading}
+                />
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Tab: Alle Leads */}
