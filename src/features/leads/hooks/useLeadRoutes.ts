@@ -240,6 +240,72 @@ export function useLeadRouteProgress(routeId: string | undefined) {
   });
 }
 
+// Lead-Route löschen (mit allen Stops)
+export function useDeleteLeadRoute() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (routeId: string) => {
+      // Erst Stops löschen
+      const { error: stopsError } = await supabase
+        .from("route_stops")
+        .delete()
+        .eq("route_id", routeId);
+
+      if (stopsError) throw stopsError;
+
+      // Dann Route löschen
+      const { error: routeError } = await supabase
+        .from("routes")
+        .delete()
+        .eq("id", routeId);
+
+      if (routeError) throw routeError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["routes"] });
+      queryClient.invalidateQueries({ queryKey: ["lead_routes"] });
+      queryClient.invalidateQueries({ queryKey: ["lead_route_progress"] });
+    },
+  });
+}
+
+// Lead-Route bearbeiten (Name und/oder Rep)
+export function useUpdateLeadRoute() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      routeId,
+      name,
+      repId,
+    }: {
+      routeId: string;
+      name?: string;
+      repId?: number;
+    }) => {
+      const updates: Record<string, any> = {};
+      if (name !== undefined) updates.name = name;
+      if (repId !== undefined) updates.rep_id = repId;
+
+      const { data, error } = await supabase
+        .from("routes")
+        .update(updates)
+        .eq("id", routeId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["routes"] });
+      queryClient.invalidateQueries({ queryKey: ["lead_routes"] });
+      queryClient.invalidateQueries({ queryKey: ["lead_route_progress"] });
+    },
+  });
+}
+
 // Stop als besucht markieren + Lead-Status auf "kontaktiert"
 export function useMarkStopVisited() {
   const queryClient = useQueryClient();

@@ -46,6 +46,14 @@ export default function LeadResearch() {
   // Tab state
   const [activeTab, setActiveTab] = useState("search");
 
+  // Beim Tab-Wechsel weg von "Meine Suchen" → Auswahl zurücksetzen
+  const handleTabChange = (tab: string) => {
+    if (tab !== "history") {
+      setSelectedSearchId(null);
+    }
+    setActiveTab(tab);
+  };
+
   // Place-IDs der ausgewählten Suche ermitteln
   const selectedSearch = useMemo(
     () => searches?.find((s) => s.id === selectedSearchId),
@@ -155,7 +163,7 @@ export default function LeadResearch() {
         Lead Recherche
       </h1>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList>
           <TabsTrigger value="search">Neue Suche</TabsTrigger>
           <TabsTrigger value="history">Meine Suchen</TabsTrigger>
