@@ -1,14 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
-import { Customer } from "./useCustomers";
+import { Customer } from "@/features/customers/hooks/useCustomers";
 import { logActivity, getSessionRepId } from "@/features/activity/services/activityLogger";
 
 export type Route = Tables<"routes">;
 export type RouteStop = Tables<"route_stops">;
 
+export type Lead = Tables<"gw_leads">;
+
 export interface RouteStopWithCustomer extends RouteStop {
     customer: Customer;
+    lead?: Lead | null;
 }
 
 export interface RouteWithStops extends Route {
@@ -35,7 +38,7 @@ export function useRoutes(repId: number | undefined) {
     });
 }
 
-// Get a single route with all stops and customer data
+// Get a single route with all stops and customer/lead data
 export function useRouteWithStops(routeId: string | undefined) {
     return useQuery({
         queryKey: ["route", routeId],
@@ -51,7 +54,7 @@ export function useRouteWithStops(routeId: string | undefined) {
 
             if (routeError) throw routeError;
 
-            // Get stops with customer data
+            // Get stops
             const { data: stops, error: stopsError } = await supabase
                 .from("route_stops")
                 .select("*")
@@ -60,25 +63,44 @@ export function useRouteWithStops(routeId: string | undefined) {
 
             if (stopsError) throw stopsError;
 
-            // Fetch customer data for each stop
-            const customerNumbers = stops.map(s => s.kunden_nummer);
-            const { data: customers, error: customersError } = await supabase
-                .from("dim_customers")
-                .select("kunden_nummer, firma, ort, plz, strasse, telefon, mobil, latitude, longitude, abc_class, opening_hours_mon, opening_hours_tue, opening_hours_wed, opening_hours_thu, opening_hours_fri, opening_hours_sat, opening_hours_sun, opening_hours_notes")
-                .in("kunden_nummer", customerNumbers);
+            // Separate customer stops and lead stops
+            const customerStopNums = stops.filter(s => s.kunden_nummer).map(s => s.kunden_nummer!);
+            const leadStopIds = stops.filter(s => s.lead_id).map(s => s.lead_id!);
 
-            if (customersError) throw customersError;
+            // Fetch customer data
+            let customerMap = new Map<number, Customer>();
+            if (customerStopNums.length > 0) {
+                const { data: customers, error: customersError } = await supabase
+                    .from("dim_customers")
+                    .select("kunden_nummer, firma, ort, plz, strasse, telefon, mobil, latitude, longitude, abc_class, opening_hours_mon, opening_hours_tue, opening_hours_wed, opening_hours_thu, opening_hours_fri, opening_hours_sat, opening_hours_sun, opening_hours_notes")
+                    .in("kunden_nummer", customerStopNums);
 
-            const customerMap = new Map(customers?.map(c => [c.kunden_nummer, c]) || []);
+                if (customersError) throw customersError;
+                customerMap = new Map(customers?.map(c => [c.kunden_nummer, c]) || []);
+            }
 
-            const stopsWithCustomers: RouteStopWithCustomer[] = stops.map(stop => ({
+            // Fetch lead data
+            let leadMap = new Map<number, Lead>();
+            if (leadStopIds.length > 0) {
+                const { data: leads, error: leadsError } = await supabase
+                    .from("gw_leads")
+                    .select("*")
+                    .in("id", leadStopIds);
+
+                if (!leadsError && leads) {
+                    leadMap = new Map(leads.map(l => [l.id, l]));
+                }
+            }
+
+            const stopsWithData: RouteStopWithCustomer[] = stops.map(stop => ({
                 ...stop,
-                customer: customerMap.get(stop.kunden_nummer) as Customer,
+                customer: stop.kunden_nummer ? customerMap.get(stop.kunden_nummer) as Customer : null as any,
+                lead: stop.lead_id ? leadMap.get(stop.lead_id) || null : null,
             }));
 
             return {
                 ...route,
-                stops: stopsWithCustomers,
+                stops: stopsWithData,
             };
         },
         enabled: !!routeId,
@@ -232,11 +254,16 @@ export function useReorderStops() {
     });
 }
 
-// Generate Google Maps URL
+// Generate Google Maps URL — supports both customer and lead stops
 export function generateGoogleMapsUrl(stops: RouteStopWithCustomer[]): string {
     if (stops.length === 0) return "";
 
     const addresses = stops.map(stop => {
+        // Lead-Stop: Adresse direkt verwenden
+        if (stop.lead) {
+            return stop.lead.address ? encodeURIComponent(stop.lead.address) : "";
+        }
+        // Kunden-Stop
         const customer = stop.customer;
         if (!customer) return "";
         const parts = [customer.strasse, customer.plz, customer.ort].filter(Boolean);

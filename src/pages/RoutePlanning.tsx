@@ -10,7 +10,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/shared/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { Plus, Trash2, Navigation, GripVertical, MapPin, Clock, Phone, ChevronLeft, Search, X, Map } from "lucide-react";
+import { Plus, Trash2, Navigation, GripVertical, MapPin, Clock, Phone, ChevronLeft, Search, X, Map, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { OpeningHoursDisplay } from "@/features/customers/components/OpeningHoursDisplay";
 import { RouteMapView } from "@/features/routes/components/RouteMapView";
@@ -48,6 +48,8 @@ export default function RoutePlanning() {
     const removeStop = useRemoveStop();
     const reorderStops = useReorderStops();
 
+    const isRep = !rep?.is_admin;
+
     const handleCreateRoute = async () => {
         if (!rep?.rep_id || !newRouteName.trim()) return;
 
@@ -61,7 +63,7 @@ export default function RoutePlanning() {
             setNewRouteWeekday("");
             setIsCreateDialogOpen(false);
             setSelectedRouteId(route.id);
-            setIsMapView(true); // Direkt zur Map-Ansicht wechseln
+            setIsMapView(true);
             toast.success("Route erstellt");
         } catch {
             toast.error("Fehler beim Erstellen");
@@ -85,7 +87,6 @@ export default function RoutePlanning() {
     const handleAddCustomer = async (customer: Customer) => {
         if (!selectedRouteId) return;
 
-        // Check if already in route
         if (routeWithStops?.stops.some(s => s.kunden_nummer === customer.kunden_nummer)) {
             toast.error("Kunde bereits in Route");
             return;
@@ -144,7 +145,7 @@ export default function RoutePlanning() {
         }
     };
 
-    // Map View (new interactive view)
+    // Map View
     if (selectedRouteId && isMapView) {
         return (
             <RouteMapView
@@ -159,6 +160,10 @@ export default function RoutePlanning() {
 
     // Route list view
     if (!selectedRouteId) {
+        // Separate standard routes and lead routes
+        const standardRoutes = routes?.filter(r => r.route_type !== 'lead') || [];
+        const leadRoutes = routes?.filter(r => r.route_type === 'lead') || [];
+
         return (
             <div className="container mx-auto p-4 max-w-4xl">
                 <div className="flex justify-between items-center mb-6">
@@ -176,54 +181,109 @@ export default function RoutePlanning() {
                     <div className="space-y-3">
                         {[1, 2, 3].map(i => <Skeleton key={i} className="h-20" />)}
                     </div>
-                ) : routes && routes.length > 0 ? (
-                    <div className="grid gap-3">
-                        {routes.map(route => (
-                            <Card
-                                key={route.id}
-                                className="cursor-pointer hover:bg-muted/50 transition-colors"
-                                onClick={() => {
-                                    setSelectedRouteId(route.id);
-                                    setIsMapView(true);
-                                }}
-                            >
-                                <CardContent className="p-4 flex justify-between items-center">
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-primary/10 p-2 rounded-lg">
-                                            <Map className="h-5 w-5 text-primary" />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-semibold">{route.name}</h3>
-                                            {route.weekday && (
-                                                <Badge variant="secondary" className="mt-1">
-                                                    {WEEKDAYS.find(w => w.value === route.weekday)?.label || route.weekday}
-                                                </Badge>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={(e) => { e.stopPropagation(); handleDeleteRoute(route.id); }}
-                                        >
-                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
                 ) : (
-                    <Card className="p-8 text-center">
-                        <Map className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <h3 className="font-semibold mb-2">Keine Routen vorhanden</h3>
-                        <p className="text-muted-foreground mb-4">Erstelle deine erste Route für Kundenbesuche</p>
-                        <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
-                            <Plus className="h-4 w-4" />
-                            Route erstellen
-                        </Button>
-                    </Card>
+                    <>
+                        {/* Standard Routes */}
+                        {standardRoutes.length > 0 && (
+                            <div className="grid gap-3 mb-6">
+                                {standardRoutes.map(route => (
+                                    <Card
+                                        key={route.id}
+                                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                                        onClick={() => {
+                                            setSelectedRouteId(route.id);
+                                            setIsMapView(true);
+                                        }}
+                                    >
+                                        <CardContent className="p-4 flex justify-between items-center">
+                                            <div className="flex items-center gap-3">
+                                                <div className="bg-primary/10 p-2 rounded-lg">
+                                                    <Map className="h-5 w-5 text-primary" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-semibold">{route.name}</h3>
+                                                    {route.weekday && (
+                                                        <Badge variant="secondary" className="mt-1">
+                                                            {WEEKDAYS.find(w => w.value === route.weekday)?.label || route.weekday}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={(e) => { e.stopPropagation(); handleDeleteRoute(route.id); }}
+                                                >
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Lead Routes */}
+                        {leadRoutes.length > 0 && (
+                            <>
+                                <h2 className="text-lg font-semibold flex items-center gap-2 mb-3">
+                                    <UserPlus className="h-5 w-5 text-orange-500" />
+                                    Neukunden-Routen
+                                </h2>
+                                <div className="grid gap-3 mb-6">
+                                    {leadRoutes.map(route => (
+                                        <Card
+                                            key={route.id}
+                                            className="cursor-pointer hover:bg-muted/50 transition-colors border-orange-200"
+                                            onClick={() => {
+                                                setSelectedRouteId(route.id);
+                                                setIsMapView(true);
+                                            }}
+                                        >
+                                            <CardContent className="p-4 flex justify-between items-center">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="bg-orange-100 p-2 rounded-lg">
+                                                        <UserPlus className="h-5 w-5 text-orange-500" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-semibold">{route.name}</h3>
+                                                        <Badge variant="outline" className="mt-1 border-orange-400 text-orange-600 bg-orange-50">
+                                                            Lead-Runde
+                                                        </Badge>
+                                                    </div>
+                                                </div>
+                                                {/* Reps können Lead-Routen nicht löschen */}
+                                                {!isRep && (
+                                                    <div className="flex items-center gap-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={(e) => { e.stopPropagation(); handleDeleteRoute(route.id); }}
+                                                        >
+                                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+
+                        {standardRoutes.length === 0 && leadRoutes.length === 0 && (
+                            <Card className="p-8 text-center">
+                                <Map className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                                <h3 className="font-semibold mb-2">Keine Routen vorhanden</h3>
+                                <p className="text-muted-foreground mb-4">Erstelle deine erste Route für Kundenbesuche</p>
+                                <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+                                    <Plus className="h-4 w-4" />
+                                    Route erstellen
+                                </Button>
+                            </Card>
+                        )}
+                    </>
                 )}
 
                 {/* Create Route Dialog */}
@@ -268,7 +328,7 @@ export default function RoutePlanning() {
         );
     }
 
-    // Route detail view
+    // Route detail view (for standard routes only — lead routes go straight to map)
     return (
         <div className="container mx-auto p-4 max-w-4xl">
             <div className="flex items-center gap-2 mb-6">

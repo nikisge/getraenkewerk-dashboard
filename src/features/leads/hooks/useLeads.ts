@@ -9,7 +9,8 @@ export type LeadStatus = "neu" | "kontaktiert" | "kein_interesse" | "kunde";
 export interface LeadFilters {
   searchTerm?: string;
   status?: LeadStatus | null;
-  searchId?: number | null;
+  placeIds?: string[] | null;
+  plz?: string;
 }
 
 export function useLeads(filters: LeadFilters = {}) {
@@ -21,8 +22,8 @@ export function useLeads(filters: LeadFilters = {}) {
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (filters.searchId) {
-        query = query.eq("search_id", filters.searchId);
+      if (filters.placeIds && filters.placeIds.length > 0) {
+        query = query.in("place_id", filters.placeIds);
       }
       if (filters.status) {
         query = query.eq("status", filters.status);
@@ -32,11 +33,15 @@ export function useLeads(filters: LeadFilters = {}) {
           `name.ilike.%${filters.searchTerm.trim()}%,address.ilike.%${filters.searchTerm.trim()}%`
         );
       }
+      if (filters.plz?.trim()) {
+        query = query.ilike("plz", `${filters.plz.trim()}%`);
+      }
 
       const { data, error } = await query;
       if (error) throw error;
       return data as Lead[];
     },
+    enabled: filters.placeIds === undefined || (filters.placeIds !== null && filters.placeIds.length > 0),
   });
 }
 

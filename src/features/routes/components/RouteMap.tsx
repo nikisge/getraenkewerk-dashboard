@@ -4,6 +4,7 @@ import { RouteStopWithCustomer } from '../hooks/useRoutes';
 import { Customer } from '@/features/customers/hooks/useCustomers';
 import { geocodeAddress } from '../services/geocodingService';
 import { supabase } from '@/integrations/supabase/client';
+import { CheckCircle2 } from 'lucide-react';
 
 // Deutschland Zentrum
 const DEFAULT_CENTER = { lat: 51.1657, lng: 10.4515 };
@@ -11,6 +12,8 @@ const DEFAULT_ZOOM = 6;
 
 // Globaler Cache - bleibt während der ganzen Session
 const coordsCache = new Map<number, { lat: number; lng: number }>();
+// Separater Cache für Lead-Koordinaten (Key: lead_id als negative Zahl um Kollision zu vermeiden)
+const leadCoordsCache = new Map<number, { lat: number; lng: number }>();
 
 // Fahrzeit-Informationen zwischen Stops
 export interface LegDuration {
@@ -27,6 +30,7 @@ interface RouteMapProps {
   showRoute?: boolean;
   selectedCustomerId?: number | null;
   className?: string;
+  isLeadRoute?: boolean;
 }
 
 export function RouteMap({
@@ -38,6 +42,7 @@ export function RouteMap({
   showRoute = true,
   selectedCustomerId,
   className = '',
+  isLeadRoute,
 }: RouteMapProps) {
   const map = useMap();
   const routesLibrary = useMapsLibrary('routes');
@@ -45,6 +50,22 @@ export function RouteMap({
   const [, forceUpdate] = useState(0);
   const geocodingInProgress = useRef(new Set<number>());
   const hasFittedBounds = useRef(false);
+
+  // Koordinaten für einen Stop holen (Kunde oder Lead)
+  const getStopCoords = (stop: RouteStopWithCustomer): { lat: number; lng: number } | null => {
+    // Lead-Stop: Koordinaten direkt aus Lead-Daten
+    if (stop.lead) {
+      if (stop.lead.latitude != null && stop.lead.longitude != null) {
+        return { lat: stop.lead.latitude, lng: stop.lead.longitude };
+      }
+      return null;
+    }
+    // Kunden-Stop: aus Cache
+    if (stop.customer) {
+      return coordsCache.get(stop.customer.kunden_nummer) || null;
+    }
+    return null;
+  };
 
   // Sofort Koordinaten aus DB/Cache laden (ohne Geocoding)
   useEffect(() => {
@@ -89,10 +110,8 @@ export function RouteMap({
 
   // Geocoding im Hintergrund
   const geocodeInBackground = async (customers: Customer[]) => {
-    // Nur die ersten 30 geocoden für Performance
     const toGeocode = customers.slice(0, 30);
 
-    // Parallel geocoden (5 gleichzeitig)
     const batchSize = 5;
     for (let i = 0; i < toGeocode.length; i += batchSize) {
       const batch = toGeocode.slice(i, i + batchSize);
@@ -100,7 +119,6 @@ export function RouteMap({
       await Promise.all(batch.map(async (customer) => {
         const kundenNr = customer.kunden_nummer;
 
-        // Bereits im Gange oder fertig?
         if (geocodingInProgress.current.has(kundenNr) || coordsCache.has(kundenNr)) {
           return;
         }
@@ -115,20 +133,17 @@ export function RouteMap({
           );
 
           if (result) {
-            // In Cache speichern
             coordsCache.set(kundenNr, {
               lat: result.latitude,
               lng: result.longitude
             });
 
-            // In DB speichern (fire & forget)
             supabase
               .from('dim_customers')
               .update({ latitude: result.latitude, longitude: result.longitude })
               .eq('kunden_nummer', kundenNr)
               .then(() => {});
 
-            // Update UI
             forceUpdate(n => n + 1);
           }
         } catch (err) {
@@ -148,7 +163,7 @@ export function RouteMap({
       map,
       suppressMarkers: true,
       polylineOptions: {
-        strokeColor: '#3b82f6',
+        strokeColor: isLeadRoute ? '#f97316' : '#3b82f6',
         strokeWeight: 4,
         strokeOpacity: 0.8,
       },
@@ -159,7 +174,7 @@ export function RouteMap({
     return () => {
       renderer.setMap(null);
     };
-  }, [routesLibrary, map]);
+  }, [routesLibrary, map, isLeadRoute]);
 
   // Calculate and display route
   useEffect(() => {
@@ -168,22 +183,16 @@ export function RouteMap({
       return;
     }
 
-    const validStops = stops.filter(s => {
-      if (!s.customer) return false;
-      return coordsCache.has(s.customer.kunden_nummer);
-    });
+    const validStops = stops.filter(s => getStopCoords(s) !== null);
 
     if (validStops.length < 2) return;
 
     const directionsService = new routesLibrary.DirectionsService();
 
-    const getCoords = (stop: RouteStopWithCustomer) =>
-      coordsCache.get(stop.customer!.kunden_nummer)!;
-
-    const origin = getCoords(validStops[0]);
-    const destination = getCoords(validStops[validStops.length - 1]);
+    const origin = getStopCoords(validStops[0])!;
+    const destination = getStopCoords(validStops[validStops.length - 1])!;
     const waypoints = validStops.slice(1, -1).map(s => ({
-      location: getCoords(s),
+      location: getStopCoords(s)!,
       stopover: true,
     }));
 
@@ -199,7 +208,6 @@ export function RouteMap({
         if (status === 'OK' && result) {
           directionsRenderer.setDirections(result);
 
-          // Fahrzeiten extrahieren und nach oben geben
           if (onDurationsCalculated && result.routes[0]?.legs) {
             const durations: LegDuration[] = result.routes[0].legs.map(leg => ({
               durationSeconds: leg.duration?.value || 0,
@@ -219,9 +227,8 @@ export function RouteMap({
     const allCoords: { lat: number; lng: number }[] = [];
 
     stops.forEach(s => {
-      if (s.customer && coordsCache.has(s.customer.kunden_nummer)) {
-        allCoords.push(coordsCache.get(s.customer.kunden_nummer)!);
-      }
+      const coords = getStopCoords(s);
+      if (coords) allCoords.push(coords);
     });
 
     availableCustomers.forEach(c => {
@@ -250,7 +257,6 @@ export function RouteMap({
     }
   };
 
-  // Zähle wie viele Koordinaten geladen werden
   const loadingCount = geocodingInProgress.current.size;
 
   return (
@@ -269,28 +275,37 @@ export function RouteMap({
       >
         {/* Stop Markers */}
         {stops.map((stop, index) => {
-          if (!stop.customer) return null;
-          const coords = coordsCache.get(stop.customer.kunden_nummer);
+          const coords = getStopCoords(stop);
           if (!coords) return null;
+
+          const isLead = !!stop.lead;
+          const isVisited = !!stop.visited_at;
+          const title = isLead ? stop.lead!.name : (stop.customer?.firma || 'Stopp');
 
           return (
             <AdvancedMarker
               key={stop.id}
               position={coords}
               onClick={() => onStopClick?.(stop)}
-              title={stop.customer?.firma || 'Stopp'}
+              title={title}
             >
               <div className="relative cursor-pointer transform hover:scale-110 transition-transform">
-                <div className="bg-primary text-primary-foreground w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white">
-                  {index + 1}
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white ${
+                  isVisited
+                    ? 'bg-green-600 text-white'
+                    : isLead
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-primary text-primary-foreground'
+                }`}>
+                  {isVisited ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
                 </div>
               </div>
             </AdvancedMarker>
           );
         })}
 
-        {/* Available Customer Markers */}
-        {availableCustomers.map(customer => {
+        {/* Available Customer Markers (nur bei Kunden-Routen) */}
+        {!isLeadRoute && availableCustomers.map(customer => {
           if (stops.some(s => s.kunden_nummer === customer.kunden_nummer)) return null;
 
           const coords = coordsCache.get(customer.kunden_nummer);
@@ -316,7 +331,7 @@ export function RouteMap({
         })}
       </GoogleMap>
 
-      {/* Loading Indicator (klein, nicht blockierend) */}
+      {/* Loading Indicator */}
       {loadingCount > 0 && (
         <div className="absolute top-2 right-2 bg-background/90 px-3 py-1.5 rounded-full shadow-md flex items-center gap-2 text-xs">
           <div className="animate-spin h-3 w-3 border-2 border-primary border-t-transparent rounded-full" />

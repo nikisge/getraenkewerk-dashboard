@@ -7,6 +7,10 @@ interface MatchedCustomer {
   kunden_nummer: number;
   firma: string;
   ort: string | null;
+  strasse: string | null;
+  plz: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 // Normalisiert Text für Vergleich: lowercase, kein Sonderzeichen, einfache Leerzeichen
@@ -18,7 +22,22 @@ function normalize(str: string): string {
     .replace(/\s+/g, " ");
 }
 
-// Prüft ob zwei Strings ähnlich genug sind
+// Haversine-Distanz in Metern
+function haversineDistance(
+  lat1: number, lng1: number,
+  lat2: number, lng2: number
+): number {
+  const R = 6371000; // Erdradius in Metern
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Prüft ob zwei Strings ähnlich genug sind (Name-Match)
 function isFuzzyMatch(leadName: string, customerFirma: string): boolean {
   const a = normalize(leadName);
   const b = normalize(customerFirma);
@@ -39,6 +58,30 @@ function isFuzzyMatch(leadName: string, customerFirma: string): boolean {
   return false;
 }
 
+// Prüft ob Adresse des Leads zur Kundenadresse passt
+function addressMatches(
+  leadAddress: string | null,
+  leadPlz: string | null,
+  customerStrasse: string | null,
+  customerPlz: string | null
+): boolean {
+  if (!leadAddress || !customerStrasse || !customerPlz) return false;
+
+  // PLZ muss übereinstimmen
+  const leadPlzValue = leadPlz || "";
+  if (leadPlzValue !== customerPlz) return false;
+
+  // Straßenname im Lead-Adressfeld enthalten
+  const normalizedAddress = normalize(leadAddress);
+  const normalizedStrasse = normalize(customerStrasse);
+  // Nur Straßennamen (ohne Hausnummer) vergleichen — mindestens 5 Zeichen
+  if (normalizedStrasse.length >= 5 && normalizedAddress.includes(normalizedStrasse)) {
+    return true;
+  }
+
+  return false;
+}
+
 // Zusätzliche Bestätigung über Stadt
 function cityMatches(leadAddress: string | null, customerOrt: string | null): boolean {
   if (!leadAddress || !customerOrt) return false;
@@ -51,7 +94,7 @@ function useExistingCustomers() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("dim_customers")
-        .select("kunden_nummer, firma, ort")
+        .select("kunden_nummer, firma, ort, strasse, plz, latitude, longitude")
         .eq("status_active", true);
       if (error) throw error;
       return data as MatchedCustomer[];
@@ -76,9 +119,43 @@ export function useCustomerMatch(leads: Lead[]) {
     const result = new Map<number, CustomerMatchResult>();
 
     for (const lead of leads) {
-      for (const customer of customers) {
-        if (!customer.firma) continue;
+      // Bereits gefunden? Skip
+      if (result.has(lead.id)) continue;
 
+      for (const customer of customers) {
+        // 1. Koordinaten-Nähe: < 100m = hohe Konfidenz
+        if (
+          lead.latitude != null && lead.longitude != null &&
+          customer.latitude != null && customer.longitude != null
+        ) {
+          const dist = haversineDistance(
+            lead.latitude, lead.longitude,
+            customer.latitude, customer.longitude
+          );
+          if (dist < 100) {
+            result.set(lead.id, {
+              kunden_nummer: customer.kunden_nummer,
+              firma: customer.firma || "",
+              ort: customer.ort,
+              confidence: "hoch",
+            });
+            break;
+          }
+        }
+
+        // 2. Adress-Match: Straße + PLZ = hohe Konfidenz
+        if (addressMatches(lead.address, lead.plz, customer.strasse, customer.plz)) {
+          result.set(lead.id, {
+            kunden_nummer: customer.kunden_nummer,
+            firma: customer.firma || "",
+            ort: customer.ort,
+            confidence: "hoch",
+          });
+          break;
+        }
+
+        // 3. Name + Stadt Fallback (bisherige Logik)
+        if (!customer.firma) continue;
         const nameMatch = isFuzzyMatch(lead.name, customer.firma);
         if (!nameMatch) continue;
 

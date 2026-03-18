@@ -8,6 +8,11 @@ interface LeadSearchCardProps {
 }
 
 export function LeadSearchCard({ search, onClick }: LeadSearchCardProps) {
+  const placeIds = search.found_place_ids as string[] | null;
+  const totalLeads = placeIds?.length || search.result_count || 0;
+  const newLeads = search.new_leads_count ?? 0;
+  const duplicates = totalLeads - newLeads;
+
   return (
     <Card
       className="cursor-pointer hover:bg-muted/50 transition-colors"
@@ -25,7 +30,10 @@ export function LeadSearchCard({ search, onClick }: LeadSearchCardProps) {
         <div className="flex items-center justify-between text-sm">
           <span className="flex items-center gap-1 text-muted-foreground">
             <Hash className="h-3.5 w-3.5" />
-            {search.result_count} Ergebnisse
+            {totalLeads} Leads
+            {duplicates > 0 && (
+              <span className="text-xs">({newLeads} neu)</span>
+            )}
           </span>
           <span className="text-muted-foreground">
             {new Date(search.created_at).toLocaleDateString("de-DE", {

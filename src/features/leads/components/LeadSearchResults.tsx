@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Badge } from "@/shared/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import { ExternalLink, Star, UserCheck } from "lucide-react";
 import { Lead, useUpdateLeadStatus, LeadStatus } from "../hooks/useLeads";
 import { useCustomerMatch, CustomerMatchResult } from "../hooks/useCustomerMatch";
@@ -12,6 +13,9 @@ import { toast } from "sonner";
 interface LeadSearchResultsProps {
   leads: Lead[];
   isLoading?: boolean;
+  selectable?: boolean;
+  selectedIds?: Set<number>;
+  onSelectionChange?: (ids: Set<number>) => void;
 }
 
 function ExistingCustomerBadge({ match }: { match: CustomerMatchResult }) {
@@ -42,7 +46,7 @@ function ExistingCustomerBadge({ match }: { match: CustomerMatchResult }) {
   );
 }
 
-export function LeadSearchResults({ leads, isLoading }: LeadSearchResultsProps) {
+export function LeadSearchResults({ leads, isLoading, selectable, selectedIds, onSelectionChange }: LeadSearchResultsProps) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const updateStatus = useUpdateLeadStatus();
   const customerMatches = useCustomerMatch(leads);
@@ -57,6 +61,26 @@ export function LeadSearchResults({ leads, isLoading }: LeadSearchResultsProps) 
     );
   };
 
+  const toggleSelection = (leadId: number) => {
+    if (!selectedIds || !onSelectionChange) return;
+    const next = new Set(selectedIds);
+    if (next.has(leadId)) {
+      next.delete(leadId);
+    } else {
+      next.add(leadId);
+    }
+    onSelectionChange(next);
+  };
+
+  const toggleAll = () => {
+    if (!onSelectionChange) return;
+    if (selectedIds && selectedIds.size === leads.length) {
+      onSelectionChange(new Set());
+    } else {
+      onSelectionChange(new Set(leads.map(l => l.id)));
+    }
+  };
+
   if (isLoading) {
     return <div className="text-center py-8 text-muted-foreground">Laden...</div>;
   }
@@ -66,6 +90,7 @@ export function LeadSearchResults({ leads, isLoading }: LeadSearchResultsProps) 
   }
 
   const matchCount = customerMatches.size;
+  const allSelected = selectedIds && selectedIds.size === leads.length;
 
   return (
     <>
@@ -81,6 +106,14 @@ export function LeadSearchResults({ leads, isLoading }: LeadSearchResultsProps) 
         <Table>
           <TableHeader>
             <TableRow>
+              {selectable && (
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={toggleAll}
+                  />
+                </TableHead>
+              )}
               <TableHead>Name</TableHead>
               <TableHead>Adresse</TableHead>
               <TableHead>Telefon</TableHead>
@@ -93,12 +126,21 @@ export function LeadSearchResults({ leads, isLoading }: LeadSearchResultsProps) 
           <TableBody>
             {leads.map((lead) => {
               const match = customerMatches.get(lead.id);
+              const isSelected = selectable && selectedIds?.has(lead.id);
               return (
                 <TableRow
                   key={lead.id}
-                  className={`cursor-pointer hover:bg-muted/50 ${match ? "bg-amber-50/50" : ""}`}
-                  onClick={() => setSelectedLead(lead)}
+                  className={`cursor-pointer hover:bg-muted/50 ${match ? "bg-amber-50/50" : ""} ${isSelected ? "bg-primary/5" : ""}`}
+                  onClick={() => selectable ? toggleSelection(lead.id) : setSelectedLead(lead)}
                 >
+                  {selectable && (
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelection(lead.id)}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell className="font-medium max-w-[250px]">
                     <div className="flex items-center gap-2">
                       <span className="truncate">{lead.name}</span>
@@ -160,23 +202,34 @@ export function LeadSearchResults({ leads, isLoading }: LeadSearchResultsProps) 
       <div className="md:hidden space-y-3">
         {leads.map((lead) => {
           const match = customerMatches.get(lead.id);
+          const isSelected = selectable && selectedIds?.has(lead.id);
           return (
             <div
               key={lead.id}
-              className={`border rounded-lg p-4 cursor-pointer hover:bg-muted/50 transition-colors ${match ? "border-amber-300 bg-amber-50/50" : ""}`}
-              onClick={() => setSelectedLead(lead)}
+              className={`border rounded-lg p-4 cursor-pointer hover:bg-muted/50 transition-colors ${match ? "border-amber-300 bg-amber-50/50" : ""} ${isSelected ? "border-primary bg-primary/5" : ""}`}
+              onClick={() => selectable ? toggleSelection(lead.id) : setSelectedLead(lead)}
             >
               <div className="flex justify-between items-start mb-2">
-                <div>
-                  <p className="font-semibold">{lead.name}</p>
-                  {lead.category && (
-                    <p className="text-xs text-muted-foreground">{lead.category}</p>
+                <div className="flex items-start gap-2">
+                  {selectable && (
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelection(lead.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-1"
+                    />
                   )}
-                  {match && (
-                    <div className="mt-1">
-                      <ExistingCustomerBadge match={match} />
-                    </div>
-                  )}
+                  <div>
+                    <p className="font-semibold">{lead.name}</p>
+                    {lead.category && (
+                      <p className="text-xs text-muted-foreground">{lead.category}</p>
+                    )}
+                    {match && (
+                      <div className="mt-1">
+                        <ExistingCustomerBadge match={match} />
+                      </div>
+                    )}
+                  </div>
                 </div>
                 {lead.rating && (
                   <span className="flex items-center gap-1 text-sm">

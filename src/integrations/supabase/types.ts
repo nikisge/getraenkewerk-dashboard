@@ -346,6 +346,8 @@ export type Database = {
           location: string
           max_results: number | null
           result_count: number | null
+          new_leads_count: number | null
+          found_place_ids: Json | null
           created_at: string
         }
         Insert: {
@@ -355,6 +357,8 @@ export type Database = {
           location: string
           max_results?: number | null
           result_count?: number | null
+          new_leads_count?: number | null
+          found_place_ids?: Json | null
           created_at?: string
         }
         Update: {
@@ -364,6 +368,8 @@ export type Database = {
           location?: string
           max_results?: number | null
           result_count?: number | null
+          new_leads_count?: number | null
+          found_place_ids?: Json | null
           created_at?: string
         }
         Relationships: [
@@ -393,6 +399,7 @@ export type Database = {
           longitude: number | null
           status: string | null
           notes: string | null
+          plz: string | null
           created_at: string
           updated_at: string
         }
@@ -412,6 +419,7 @@ export type Database = {
           longitude?: number | null
           status?: string | null
           notes?: string | null
+          plz?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -431,6 +439,7 @@ export type Database = {
           longitude?: number | null
           status?: string | null
           notes?: string | null
+          plz?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -493,25 +502,31 @@ export type Database = {
         Row: {
           id: string
           route_id: string
-          kunden_nummer: number
+          kunden_nummer: number | null
           stop_order: number
           notes: string | null
+          lead_id: number | null
+          visited_at: string | null
           created_at: string
         }
         Insert: {
           id?: string
           route_id: string
-          kunden_nummer: number
+          kunden_nummer?: number | null
           stop_order: number
           notes?: string | null
+          lead_id?: number | null
+          visited_at?: string | null
           created_at?: string
         }
         Update: {
           id?: string
           route_id?: string
-          kunden_nummer?: number
+          kunden_nummer?: number | null
           stop_order?: number
           notes?: string | null
+          lead_id?: number | null
+          visited_at?: string | null
           created_at?: string
         }
         Relationships: [
@@ -529,6 +544,13 @@ export type Database = {
             referencedRelation: "dim_customers"
             referencedColumns: ["kunden_nummer"]
           },
+          {
+            foreignKeyName: "route_stops_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "gw_leads"
+            referencedColumns: ["id"]
+          },
         ]
       }
       routes: {
@@ -539,6 +561,7 @@ export type Database = {
           weekday: string | null
           start_time: string | null
           default_visit_duration: number
+          route_type: string
           created_at: string
           updated_at: string
         }
@@ -549,6 +572,7 @@ export type Database = {
           weekday?: string | null
           start_time?: string | null
           default_visit_duration?: number
+          route_type?: string
           created_at?: string
           updated_at?: string
         }
@@ -559,6 +583,7 @@ export type Database = {
           weekday?: string | null
           start_time?: string | null
           default_visit_duration?: number
+          route_type?: string
           created_at?: string
           updated_at?: string
         }

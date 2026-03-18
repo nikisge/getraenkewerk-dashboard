@@ -19,6 +19,7 @@ SELECT
   ROUND(
     CAST(COUNT(DISTINCT CASE 
       WHEN t.last_change >= CURRENT_DATE - INTERVAL '30 days' 
+      
         AND t.status = 'YES' 
       THEN t.id 
     END) AS NUMERIC) / 30,
